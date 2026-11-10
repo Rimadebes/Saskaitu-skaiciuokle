@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sąskaitų skaičiuoklė</title>
+<link rel="icon" id="favLink" type="image/png" href="">
+<link rel="apple-touch-icon" id="appleLink" href="">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap');
   :root {
@@ -136,10 +138,30 @@
   #shareText { width: 100%; height: 150px; border: 1.5px solid var(--line); border-radius: 10px; padding: 11px; font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.5; color: var(--ink); background: #f7faf9; resize: none; margin: 10px 0; }
   .share-modal { max-width: 360px; }
   #sharePreview { width: 100%; border-radius: 12px; border: 1px solid var(--line); margin-bottom: 14px; display: block; }
+  .share-pick-h { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  #shareRows { margin-bottom: 12px; max-height: 190px; overflow-y: auto; }
+  .share-row { display: flex; align-items: center; gap: 9px; padding: 7px 4px; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .share-row:last-child { border-bottom: none; }
+  .share-row input { width: 18px; height: 18px; accent-color: var(--water); flex: none; }
+  .share-row .sr-name { flex: 1; font-size: 14px; }
+  .share-row .sr-amt { font-family: 'Fraunces', serif; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--muted); }
   .btn-ok.wide, .btn-cancel.wide { width: 100%; font-family: inherit; font-size: 14px; font-weight: 600; padding: 12px; border-radius: 10px; border: none; cursor: pointer; }
   #shareImage { width: 100%; font-family: inherit; font-size: 15px; font-weight: 600; padding: 13px; border-radius: 10px; border: none; cursor: pointer; margin-bottom: 10px; }
   #shareTextWrap { margin-bottom: 10px; }
   #shareTextWrap summary { font-size: 13px; color: var(--muted); cursor: pointer; padding: 6px 0; text-align: center; font-weight: 600; }
+  .icon-modal { max-width: 360px; }
+  .icon-preview-wrap { display: flex; justify-content: center; margin-bottom: 14px; }
+  #iconBigPreview { width: 96px; height: 96px; border-radius: 22px; }
+  .icon-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .icon-tile { border: 2px solid transparent; border-radius: 16px; padding: 4px; cursor: pointer; background: none; }
+  .icon-tile img { width: 100%; border-radius: 12px; display: block; }
+  .icon-tile.sel { border-color: var(--water); }
+  .icon-custom { display: flex; align-items: center; gap: 10px; }
+  #iconEmoji { width: 64px; font-size: 26px; text-align: center; padding: 8px; border: 1.5px solid var(--line); border-radius: 12px; background: #f7faf9; }
+  .icon-colors { display: flex; gap: 8px; flex-wrap: wrap; }
+  .icon-colors button { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1.5px var(--line); cursor: pointer; }
+  .icon-colors button.sel { box-shadow: 0 0 0 2.5px var(--water); }
+  .icon-hint { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 14px; background: var(--paper); border-radius: 10px; padding: 10px 12px; }
   .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px); background: var(--ink); color: #fff; font-size: 13.5px; padding: 11px 18px; border-radius: 10px; opacity: 0; transition: all .25s; z-index: 60; pointer-events: none; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
@@ -178,6 +200,7 @@
 
     <button class="share" id="share">Dalintis suma</button>
     <button class="history-btn" id="historyBtn">📊 Istorija ir grafikai</button>
+    <button class="history-btn" id="iconBtn">🎨 Ikona</button>
 
     <footer>
       <button class="clear" id="clear">Naujas mėnuo (išvalyti)</button>
@@ -199,6 +222,8 @@
   <div class="overlay" id="shareOverlay">
     <div class="modal share-modal">
       <h3 id="shareTitle">Siųsti sumą</h3>
+      <div class="share-pick-h" id="sharePickLabel">Ką įtraukti</div>
+      <div id="shareRows"></div>
       <img id="sharePreview" alt="Sąskaitų kortelė">
       <button class="btn-ok" id="shareImage">Siųsti kaip paveikslėlį</button>
       <details id="shareTextWrap">
@@ -207,6 +232,22 @@
         <button class="btn-cancel wide" id="shareCopy">Kopijuoti tekstą</button>
       </details>
       <button class="btn-cancel wide" id="shareClose">Uždaryti</button>
+    </div>
+  </div>
+  <div class="overlay" id="iconOverlay">
+    <div class="modal icon-modal">
+      <h3 id="iconTitle">Pasirink ikoną</h3>
+      <div class="icon-preview-wrap"><img id="iconBigPreview" alt="icon"></div>
+      <div class="hist-h" id="iconPresetsLabel">Paruoštos</div>
+      <div id="iconPresets" class="icon-grid"></div>
+      <div class="hist-h" id="iconCustomLabel" style="margin-top:14px">Sava ikona</div>
+      <div class="icon-custom">
+        <input id="iconEmoji" type="text" maxlength="4" placeholder="🙂">
+        <div id="iconColors" class="icon-colors"></div>
+      </div>
+      <div class="icon-hint" id="iconHint"></div>
+      <button class="btn-ok wide" id="iconApply" style="margin-top:14px">Taikyti</button>
+      <button class="btn-cancel wide" id="iconClose" style="margin-top:10px">Uždaryti</button>
     </div>
   </div>
   <div class="overlay" id="histOverlay">
@@ -252,7 +293,7 @@
       consumption:'Suvartojimas', pastMonths:'Praėję mėnesiai', chipDate:'terminas', chipDateTo:'iki', chipMeter:'rodmenys', chipLink:'nuoroda',
       open:'Atidaryti', remove:'Pašalinti', from:'nuo', to:'iki', namePh:'Pavadinimas', urlPh:'pvz. ignitis.lt',
       used:'sunaudota', pricier:'brangiau', cheaper:'pigiau', overdueW:'Pradelsta', soonW:'Greitai mokėti', todayW:'šiandien', inDays:'po {n} d.',
-      summaryTitle:'Sąskaitos', paidWord:'apmokėta', allPaidShort:'Viskas apmokėta', calTitle:'Apmokėti sąskaitas', calDetails:'Komunalinės sąskaitos. Terminas – paskutinė mėnesio diena.' },
+      selectRows:'Ką įtraukti', iconBtn:'Ikona', iconTitle:'Pasirink ikoną', iconPresets:'Paruoštos', iconCustom:'Sava ikona', iconColor:'Spalva', iconApply:'Taikyti', iconHint:'💡 Pirma išsirink ar susikurk ikoną, tada prisek programėlę prie pradžios ekrano — telefonas panaudos pasirinktą ikoną.', summaryTitle:'Sąskaitos', paidWord:'apmokėta', allPaidShort:'Viskas apmokėta', calTitle:'Apmokėti sąskaitas', calDetails:'Komunalinės sąskaitos. Terminas – paskutinė mėnesio diena.' },
     en: { defNames:['Cold water','Hot water','Electricity','Gas','Waste','Building upkeep'],
       eyebrow:'Monthly bills', title:'Bills calculator', remind:'Remind', dueLabel:'Due by',
       addRow:'Add row', totalLabel:'Total', remainLabel:'Left to pay', allPaid:'All paid ✓',
@@ -269,7 +310,7 @@
       consumption:'Consumption', pastMonths:'Past months', chipDate:'due', chipDateTo:'by', chipMeter:'readings', chipLink:'link',
       open:'Open', remove:'Remove', from:'from', to:'to', namePh:'Name', urlPh:'e.g. ignitis.lt',
       used:'used', pricier:'more', cheaper:'less', overdueW:'Overdue', soonW:'Due soon', todayW:'today', inDays:'in {n} d.',
-      summaryTitle:'Bills', paidWord:'paid', allPaidShort:'All paid', calTitle:'Pay the bills', calDetails:'Utility bills. Due on the last day of the month.' },
+      selectRows:'What to include', iconBtn:'Icon', iconTitle:'Choose an icon', iconPresets:'Presets', iconCustom:'Your own', iconColor:'Color', iconApply:'Apply', iconHint:'💡 Choose or create your icon first, then add the app to your home screen — the phone will use the chosen icon.', summaryTitle:'Bills', paidWord:'paid', allPaidShort:'All paid', calTitle:'Pay the bills', calDetails:'Utility bills. Due on the last day of the month.' },
     ru: { defNames:['Холодная вода','Горячая вода','Электричество','Газ','Мусор','Содержание дома'],
       eyebrow:'Ежемесячные счета', title:'Калькулятор счетов', remind:'Напомнить', dueLabel:'Срок: до',
       addRow:'Добавить строку', totalLabel:'Итого', remainLabel:'Осталось оплатить', allPaid:'Всё оплачено ✓',
@@ -286,7 +327,7 @@
       consumption:'Потребление', pastMonths:'Прошлые месяцы', chipDate:'срок', chipDateTo:'до', chipMeter:'показания', chipLink:'ссылка',
       open:'Открыть', remove:'Удалить', from:'от', to:'до', namePh:'Название', urlPh:'напр. ignitis.lt',
       used:'израсходовано', pricier:'дороже', cheaper:'дешевле', overdueW:'Просрочено', soonW:'Скоро оплата', todayW:'сегодня', inDays:'через {n} дн.',
-      summaryTitle:'Счета', paidWord:'оплачено', allPaidShort:'Всё оплачено', calTitle:'Оплатить счета', calDetails:'Коммунальные счета. Срок — последний день месяца.' },
+      selectRows:'Что включить', iconBtn:'Иконка', iconTitle:'Выбери иконку', iconPresets:'Готовые', iconCustom:'Своя', iconColor:'Цвет', iconApply:'Применить', iconHint:'💡 Сначала выбери или создай иконку, затем добавь приложение на главный экран — телефон использует выбранную иконку.', summaryTitle:'Счета', paidWord:'оплачено', allPaidShort:'Всё оплачено', calTitle:'Оплатить счета', calDetails:'Коммунальные счета. Срок — последний день месяца.' },
     lv: { defNames:['Aukstais ūdens','Karstais ūdens','Elektrība','Gāze','Atkritumi','Nama apsaimniekošana'],
       eyebrow:'Mēneša rēķini', title:'Rēķinu kalkulators', remind:'Atgādināt', dueLabel:'Termiņš: līdz',
       addRow:'Pievienot rindu', totalLabel:'Kopā', remainLabel:'Atlicis samaksāt', allPaid:'Viss samaksāts ✓',
@@ -303,7 +344,7 @@
       consumption:'Patēriņš', pastMonths:'Iepriekšējie mēneši', chipDate:'termiņš', chipDateTo:'līdz', chipMeter:'rādījumi', chipLink:'saite',
       open:'Atvērt', remove:'Noņemt', from:'no', to:'līdz', namePh:'Nosaukums', urlPh:'piem. ignitis.lt',
       used:'patērēts', pricier:'dārgāk', cheaper:'lētāk', overdueW:'Nokavēts', soonW:'Drīz jāmaksā', todayW:'šodien', inDays:'pēc {n} d.',
-      summaryTitle:'Rēķini', paidWord:'samaksāts', allPaidShort:'Viss samaksāts', calTitle:'Samaksāt rēķinus', calDetails:'Komunālie rēķini. Termiņš — mēneša pēdējā diena.' },
+      selectRows:'Ko iekļaut', iconBtn:'Ikona', iconTitle:'Izvēlies ikonu', iconPresets:'Gatavās', iconCustom:'Sava', iconColor:'Krāsa', iconApply:'Lietot', iconHint:'💡 Vispirms izvēlies vai izveido ikonu, tad pievieno lietotni sākuma ekrānam — tālrunis izmantos izvēlēto ikonu.', summaryTitle:'Rēķini', paidWord:'samaksāts', allPaidShort:'Viss samaksāts', calTitle:'Samaksāt rēķinus', calDetails:'Komunālie rēķini. Termiņš — mēneša pēdējā diena.' },
     et: { defNames:['Külm vesi','Kuum vesi','Elekter','Gaas','Prügi','Majahaldus'],
       eyebrow:'Kuu arved', title:'Arvete kalkulaator', remind:'Tuleta meelde', dueLabel:'Tähtaeg: kuni',
       addRow:'Lisa rida', totalLabel:'Kokku', remainLabel:'Maksta jäänud', allPaid:'Kõik makstud ✓',
@@ -320,7 +361,7 @@
       consumption:'Tarbimine', pastMonths:'Möödunud kuud', chipDate:'tähtaeg', chipDateTo:'kuni', chipMeter:'näidud', chipLink:'link',
       open:'Ava', remove:'Eemalda', from:'alates', to:'kuni', namePh:'Nimi', urlPh:'nt ignitis.lt',
       used:'tarbitud', pricier:'kallim', cheaper:'odavam', overdueW:'Hilinenud', soonW:'Varsti maksta', todayW:'täna', inDays:'{n} p pärast',
-      summaryTitle:'Arved', paidWord:'makstud', allPaidShort:'Kõik makstud', calTitle:'Maksa arved', calDetails:'Kommunaalarved. Tähtaeg — kuu viimane päev.' }
+      selectRows:'Mida kaasata', iconBtn:'Ikoon', iconTitle:'Vali ikoon', iconPresets:'Valmis', iconCustom:'Oma', iconColor:'Värv', iconApply:'Rakenda', iconHint:'💡 Vali või loo esmalt ikoon, seejärel lisa rakendus avakuvale — telefon kasutab valitud ikooni.', summaryTitle:'Arved', paidWord:'makstud', allPaidShort:'Kõik makstud', calTitle:'Maksa arved', calDetails:'Kommunaalarved. Tähtaeg — kuu viimane päev.' }
   };
   function loadLang() { let v=''; try { v = localStorage.getItem(LANG_KEY) || ''; } catch(e){} return I18N[v] ? v : 'lt'; }
   let lang = loadLang();
@@ -453,20 +494,21 @@
   }
   function update() { recalc(); save(); }
 
-  function collectSummaryData() {
+  function collectSummaryData(sel) {
     let total = 0, remaining = 0; const items = [];
-    rowsEl.querySelectorAll('.row').forEach(row => {
-      const name = row.querySelector('.name').value.trim() || 'Be pavadinimo';
+    rowsEl.querySelectorAll('.row').forEach((row, i) => {
       const v = num(row.querySelector('.amount-in').value);
       if (v === null) return;
+      if (sel && !sel.has(i)) return;
+      const name = row.querySelector('.name').value.trim() || '—';
       const paid = row.classList.contains('is-paid');
       total += v; if (!paid) remaining += v;
       items.push({ name, amount: v, paid });
     });
     return { items, total, remaining };
   }
-  function buildSummary() {
-    const { items, total, remaining } = collectSummaryData();
+  function buildSummary(sel) {
+    const { items, total, remaining } = collectSummaryData(sel);
     const div = '━━━━━━━━━━━━━━━';
     const lines = items.map(it => `${it.name} — ${fmt(it.amount)}${it.paid ? ' ✓' : ''}`);
     let text = `💶 ${t('summaryTitle')} · ${monthText(getMonth())}\n${div}\n` + lines.join('\n') + `\n${div}\n${t('totalLabel')}: ${fmt(total)}`;
@@ -485,9 +527,9 @@
     ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
   }
-  async function renderCard() {
+  async function renderCard(sel) {
     try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch(e){}
-    const { items, total, remaining } = collectSummaryData();
+    const { items, total, remaining } = collectSummaryData(sel);
     const showRemaining = remaining > 0 && remaining !== total;
     const dpr = 2, W = 720, padX = 48, headerH = 150, rowH = 62;
     const totalH = showRemaining ? 150 : 110;
@@ -540,18 +582,45 @@
   const shareOverlay = document.getElementById('shareOverlay');
   const shareTextEl = document.getElementById('shareText');
   const sharePreview = document.getElementById('sharePreview');
-  let shareBlob = null;
+  let shareBlob = null, shareSel = null;
 
-  async function openShare() {
-    shareTextEl.value = buildSummary();
+  function buildShareChecklist() {
+    const cont = document.getElementById('shareRows');
+    cont.innerHTML = '';
+    shareSel = new Set();
+    rowsEl.querySelectorAll('.row').forEach((row, i) => {
+      const v = num(row.querySelector('.amount-in').value);
+      if (v === null) return;
+      shareSel.add(i);
+      const name = row.querySelector('.name').value.trim() || '—';
+      const lab = document.createElement('label');
+      lab.className = 'share-row';
+      lab.innerHTML = `<input type="checkbox" checked data-i="${i}"><span class="sr-name"></span><span class="sr-amt">${fmt(v)}</span>`;
+      lab.querySelector('.sr-name').textContent = name;
+      lab.querySelector('input').addEventListener('change', (e) => {
+        const idx = +e.target.dataset.i;
+        if (e.target.checked) shareSel.add(idx); else shareSel.delete(idx);
+        rebuildSharePreview();
+      });
+      cont.appendChild(lab);
+    });
+    cont.style.display = cont.children.length ? '' : 'none';
+    document.getElementById('sharePickLabel').style.display = cont.children.length ? '' : 'none';
+  }
+  async function rebuildSharePreview() {
+    shareTextEl.value = buildSummary(shareSel);
     shareBlob = null;
-    sharePreview.style.display = 'block';
-    shareOverlay.classList.add('show');
     try {
-      const c = await renderCard();
+      const c = await renderCard(shareSel);
       sharePreview.src = c.toDataURL('image/png');
+      sharePreview.style.display = 'block';
       shareBlob = await canvasToBlob(c);
     } catch(e) { sharePreview.style.display = 'none'; }
+  }
+  async function openShare() {
+    shareOverlay.classList.add('show');
+    buildShareChecklist();
+    await rebuildSharePreview();
   }
   document.getElementById('share').addEventListener('click', openShare);
 
@@ -928,6 +997,7 @@
     setTxt('hintNote', t('hint'));
     setTxt('mCancel', t('cancel'));
     setTxt('shareTitle', t('shareTitle'));
+    setTxt('sharePickLabel', t('selectRows'));
     setTxt('shareImage', t('shareAsImage'));
     setTxt('shareOrText', t('orText'));
     setTxt('shareCopy', t('copyText'));
@@ -936,6 +1006,13 @@
     setTxt('histEmpty', t('histEmpty'));
     setTxt('histChartH', t('expenses'));
     setTxt('histClose', t('close'));
+    setTxt('iconBtn', '🎨 ' + t('iconBtn'));
+    setTxt('iconTitle', t('iconTitle'));
+    setTxt('iconPresetsLabel', t('iconPresets'));
+    setTxt('iconCustomLabel', t('iconCustom'));
+    setTxt('iconApply', t('iconApply'));
+    setTxt('iconHint', t('iconHint'));
+    setTxt('iconClose', t('close'));
   }
 
   document.getElementById('langSel').addEventListener('change', (e) => {
@@ -954,6 +1031,61 @@
     scheduleCloud();
   });
 
+  // ---- ikonos pasirinkimas ----
+  const ICON_KEY = 'saskaitos_icon';
+  const ICON_PRESETS = [ {emoji:'🧾',bg:'#2f7d8c'}, {emoji:'🧮',bg:'#1c2620'}, {emoji:'💶',bg:'#c4622d'}, {emoji:'🏠',bg:'#2e9e6b'} ];
+  const ICON_COLORS = ['#2f7d8c','#1c2620','#c4622d','#2e9e6b','#7a5cc0','#c0392b','#c98a16','#3a6ea5'];
+  let iconCfg = loadIcon();
+  const iconOverlay = document.getElementById('iconOverlay');
+
+  function loadIcon() { try { const r = localStorage.getItem(ICON_KEY); if (r) { const o = JSON.parse(r); if (o && o.emoji && o.bg) return o; } } catch(e){} return { emoji:'🧾', bg:'#2f7d8c' }; }
+  function saveIcon() { try { localStorage.setItem(ICON_KEY, JSON.stringify(iconCfg)); } catch(e){} }
+  function makeIconDataURL(emoji, bg, size) {
+    size = size || 192;
+    const c = document.createElement('canvas'); c.width = size; c.height = size;
+    const ctx = c.getContext('2d');
+    roundRect(ctx, 0, 0, size, size, size * 0.22); ctx.fillStyle = bg; ctx.fill();
+    ctx.font = Math.round(size * 0.55) + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(emoji, size / 2, size * 0.55);
+    return c.toDataURL('image/png');
+  }
+  function applyIcon() {
+    const fav = document.getElementById('favLink'); if (fav) fav.href = makeIconDataURL(iconCfg.emoji, iconCfg.bg, 64);
+    const apple = document.getElementById('appleLink'); if (apple) apple.href = makeIconDataURL(iconCfg.emoji, iconCfg.bg, 180);
+    const prev = document.getElementById('iconBigPreview'); if (prev) prev.src = makeIconDataURL(iconCfg.emoji, iconCfg.bg, 192);
+  }
+  function renderPresetsAndColors() {
+    const grid = document.getElementById('iconPresets'); grid.innerHTML = '';
+    ICON_PRESETS.forEach(p => {
+      const b = document.createElement('button');
+      b.className = 'icon-tile' + ((p.emoji === iconCfg.emoji && p.bg === iconCfg.bg) ? ' sel' : '');
+      b.innerHTML = `<img src="${makeIconDataURL(p.emoji, p.bg, 96)}">`;
+      b.addEventListener('click', () => { iconCfg = { emoji:p.emoji, bg:p.bg }; saveIcon(); applyIcon(); document.getElementById('iconEmoji').value = iconCfg.emoji; renderPresetsAndColors(); });
+      grid.appendChild(b);
+    });
+    const colors = document.getElementById('iconColors'); colors.innerHTML = '';
+    ICON_COLORS.forEach(col => {
+      const b = document.createElement('button'); b.style.background = col; if (col === iconCfg.bg) b.className = 'sel';
+      b.addEventListener('click', () => { iconCfg = { emoji:iconCfg.emoji, bg:col }; saveIcon(); applyIcon(); renderPresetsAndColors(); });
+      colors.appendChild(b);
+    });
+  }
+  function openIcon() {
+    document.getElementById('iconEmoji').value = iconCfg.emoji;
+    renderPresetsAndColors();
+    applyIcon();
+  }
+  document.getElementById('iconEmoji').addEventListener('input', (e) => {
+    const chars = Array.from(e.target.value.trim());
+    if (chars.length) { iconCfg = { emoji: chars[0], bg: iconCfg.bg }; saveIcon(); applyIcon(); renderPresetsAndColors(); }
+  });
+  document.getElementById('iconBtn').addEventListener('click', () => { openIcon(); iconOverlay.classList.add('show'); });
+  document.getElementById('iconClose').addEventListener('click', () => iconOverlay.classList.remove('show'));
+  document.getElementById('iconApply').addEventListener('click', () => { iconOverlay.classList.remove('show'); toast(t('savedTick')); });
+  iconOverlay.addEventListener('click', e => { if (e.target === iconOverlay) iconOverlay.classList.remove('show'); });
+
+  applyIcon();
   updateDueUI();
   initCloud();
 </script>
