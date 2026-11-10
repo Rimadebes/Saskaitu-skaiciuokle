@@ -15,7 +15,8 @@
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { font-family: 'Inter', system-ui, sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 26px 16px 70px; }
   .wrap { width: 100%; max-width: 440px; }
-  header { margin-bottom: 16px; }
+  header { margin-bottom: 16px; position: relative; }
+  #langSel { position: absolute; top: 0; right: 0; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--ink); background: var(--card); border: 1.5px solid var(--line); border-radius: 9px; padding: 6px 8px; cursor: pointer; }
   .eyebrow { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
   h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 29px; line-height: 1.1; letter-spacing: -0.01em; }
   .month-btn { margin-top: 8px; border: 1.5px solid var(--line); background: var(--card); color: var(--water); font-family: inherit; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
@@ -146,8 +147,15 @@
 <body>
   <div class="wrap">
     <header>
-      <div class="eyebrow">Mėnesio sąskaitos</div>
-      <h1>Sąskaitų skaičiuoklė</h1>
+      <select id="langSel" aria-label="Language">
+        <option value="lt">🇱🇹 LT</option>
+        <option value="en">🇬🇧 EN</option>
+        <option value="ru">🇷🇺 RU</option>
+        <option value="lv">🇱🇻 LV</option>
+        <option value="et">🇪🇪 ET</option>
+      </select>
+      <div class="eyebrow" id="eyebrow">Mėnesio sąskaitos</div>
+      <h1 id="title">Sąskaitų skaičiuoklė</h1>
       <button class="month-btn" id="monthBtn"><span>📆</span><span id="monthLabel">—</span></button>
       <input class="month-input" id="monthInput" type="month">
     </header>
@@ -155,16 +163,16 @@
     <div class="alert" id="alert"></div>
 
     <div class="duebar">
-      <span id="dueText">Terminas: —</span>
-      <a class="cal-btn" id="calBtn" target="_blank" rel="noopener noreferrer">⏰ Priminti</a>
+      <span id="dueText">—</span>
+      <a class="cal-btn" id="calBtn" target="_blank" rel="noopener noreferrer">⏰ <span id="remindTxt">Priminti</span></a>
     </div>
 
     <div class="card">
       <div id="rows"></div>
       <div class="add-bar"><button class="add" id="add">+ Pridėti eilutę</button></div>
       <div class="totals">
-        <div class="tline"><span class="t-label">Iš viso</span><span class="t-amount big" id="total">0,00 €</span></div>
-        <div class="tline"><span class="t-label">Liko sumokėti</span><span class="t-amount main" id="remaining">0,00 €</span></div>
+        <div class="tline"><span class="t-label" id="totalLabel">Iš viso</span><span class="t-amount big" id="total">0,00 €</span></div>
+        <div class="tline"><span class="t-label" id="remainLabel">Liko sumokėti</span><span class="t-amount main" id="remaining">0,00 €</span></div>
       </div>
     </div>
 
@@ -174,7 +182,7 @@
     <footer>
       <button class="clear" id="clear">Naujas mėnuo (išvalyti)</button>
       <div class="saved-note" id="savedNote">Įrašyta automatiškai</div>
-      <div class="hint-note">📅 terminas · 🔢 skaitliukų rodmenys (nuo–iki) · 🌐 svetainės nuoroda. Pažymėtos datos: pradelstos raudonai, artėjančios oranžiniai.</div>
+      <div class="hint-note" id="hintNote">📅 terminas · 🔢 skaitliukų rodmenys (nuo–iki) · 🌐 svetainės nuoroda. Pažymėtos datos: pradelstos raudonai, artėjančios oranžiniai.</div>
     </footer>
   </div>
 
@@ -190,11 +198,11 @@
   </div>
   <div class="overlay" id="shareOverlay">
     <div class="modal share-modal">
-      <h3>Siųsti sumą</h3>
+      <h3 id="shareTitle">Siųsti sumą</h3>
       <img id="sharePreview" alt="Sąskaitų kortelė">
       <button class="btn-ok" id="shareImage">Siųsti kaip paveikslėlį</button>
       <details id="shareTextWrap">
-        <summary>arba siųsti tekstu</summary>
+        <summary id="shareOrText">arba siųsti tekstu</summary>
         <textarea id="shareText" readonly></textarea>
         <button class="btn-cancel wide" id="shareCopy">Kopijuoti tekstą</button>
       </details>
@@ -203,12 +211,12 @@
   </div>
   <div class="overlay" id="histOverlay">
     <div class="modal hist-modal">
-      <h3>Istorija ir grafikai</h3>
+      <h3 id="histTitle">Istorija ir grafikai</h3>
       <div id="histEmpty" class="hist-empty">Istorija atsiras, kai paspausi „Naujas mėnuo" — tada dabartinio mėnesio duomenys išsisaugos čia.</div>
       <div id="histBody">
         <div class="hist-sec" id="histYear"></div>
         <div class="hist-sec">
-          <div class="hist-h">Išlaidos per mėnesį</div>
+          <div class="hist-h" id="histChartH">Išlaidos per mėnesį</div>
           <canvas id="histChart"></canvas>
         </div>
         <div class="hist-sec" id="histConsumption"></div>
@@ -224,13 +232,102 @@
   const MONTH_KEY = 'saskaitos_menuo';
   const HIST_KEY = 'saskaitos_history';
   let history = loadHistoryLocal();
-  const defaults = [
-    { name: 'Šaltas vanduo',  amount: '', paid: false, url: '', due: '', mFrom: '', mTo: '' },
-    { name: 'Karštas vanduo', amount: '', paid: false, url: '', due: '', mFrom: '', mTo: '' },
-    { name: 'Elektra, dujos', amount: '', paid: false, url: '', due: '', mFrom: '', mTo: '' },
-    { name: 'Šiukšlės',       amount: '', paid: false, url: '', due: '', mFrom: '', mTo: '' },
-    { name: 'Būtų ūkis',      amount: '', paid: false, url: '', due: '', mFrom: '', mTo: '' }
-  ];
+  // ================= KALBOS (i18n) =================
+  const LANG_KEY = 'saskaitos_lang';
+  const LOCALE = { lt: 'lt-LT', en: 'en-GB', ru: 'ru-RU', lv: 'lv-LV', et: 'et-EE' };
+  const I18N = {
+    lt: { defNames:['Šaltas vanduo','Karštas vanduo','Elektra, dujos','Šiukšlės','Būtų ūkis'],
+      eyebrow:'Mėnesio sąskaitos', title:'Sąskaitų skaičiuoklė', remind:'Priminti', dueLabel:'Terminas: iki',
+      addRow:'Pridėti eilutę', totalLabel:'Iš viso', remainLabel:'Liko sumokėti', allPaid:'Viskas apmokėta ✓',
+      shareBtn:'Dalintis suma', historyBtn:'📊 Istorija ir grafikai', newMonth:'Naujas mėnuo (išvalyti)',
+      savedAuto:'Įrašyta automatiškai', savedTick:'Įrašyta ✓',
+      hint:'📅 terminas · 🔢 skaitliukų rodmenys (nuo–iki) · 🌐 svetainės nuoroda. Pažymėtos datos: pradelstos raudonai, artėjančios oranžiniai.',
+      cancel:'Atšaukti', ok:'Gerai', startBtn:'Pradėti', nmTitle:'Pradėti naują mėnesį?',
+      nmBody:'• Mėnuo pasikeis į kitą\n• Sumos ir varnelės išsivalys\n• Terminai pasislinks mėnesiu į priekį\n• Rodmenų „iki" persikels į „nuo"\n• Nuorodos liks',
+      nmDone:'Naujas mėnuo pradėtas', shareTitle:'Siųsti sumą', shareAsImage:'Siųsti kaip paveikslėlį',
+      orText:'arba siųsti tekstu', copyText:'Kopijuoti tekstą', close:'Uždaryti',
+      tCopied:'Nukopijuota', tCopyHold:'Pažymėk tekstą ir paspausk „Kopijuoti"', tImgSaved:'Paveikslėlis išsaugotas', tImgReady:'Paveikslėlis paruoštas', tFail:'Nepavyko. Pabandyk „Kopijuoti tekstą".',
+      histTitle:'Istorija ir grafikai', histEmpty:'Istorija atsiras, kai paspausi „Naujas mėnuo" — tada dabartinio mėnesio duomenys išsisaugos čia.',
+      expenses:'Išlaidos per mėnesį', thisYear:'Šiais metais', monthsWord:'mėn.', avgWord:'vidutiniškai', perMonth:'/mėn.',
+      consumption:'Suvartojimas', pastMonths:'Praėję mėnesiai', chipDate:'terminas', chipDateTo:'iki', chipMeter:'rodmenys', chipLink:'nuoroda',
+      open:'Atidaryti', remove:'Pašalinti', from:'nuo', to:'iki', namePh:'Pavadinimas', urlPh:'pvz. ignitis.lt',
+      used:'sunaudota', pricier:'brangiau', cheaper:'pigiau', overdueW:'Pradelsta', soonW:'Greitai mokėti', todayW:'šiandien', inDays:'po {n} d.',
+      summaryTitle:'Sąskaitos', paidWord:'apmokėta', allPaidShort:'Viskas apmokėta', calTitle:'Apmokėti sąskaitas', calDetails:'Komunalinės sąskaitos. Terminas – paskutinė mėnesio diena.' },
+    en: { defNames:['Cold water','Hot water','Electricity, gas','Waste','Building upkeep'],
+      eyebrow:'Monthly bills', title:'Bills calculator', remind:'Remind', dueLabel:'Due by',
+      addRow:'Add row', totalLabel:'Total', remainLabel:'Left to pay', allPaid:'All paid ✓',
+      shareBtn:'Share total', historyBtn:'📊 History & charts', newMonth:'New month (clear)',
+      savedAuto:'Saved automatically', savedTick:'Saved ✓',
+      hint:'📅 due date · 🔢 meter readings (from–to) · 🌐 website link. Marked dates: overdue in red, upcoming in orange.',
+      cancel:'Cancel', ok:'OK', startBtn:'Start', nmTitle:'Start a new month?',
+      nmBody:'• The month moves to the next\n• Amounts and checkmarks clear\n• Due dates shift one month forward\n• Meter "to" moves to "from"\n• Links stay',
+      nmDone:'New month started', shareTitle:'Send total', shareAsImage:'Send as image',
+      orText:'or send as text', copyText:'Copy text', close:'Close',
+      tCopied:'Copied', tCopyHold:'Select the text and tap Copy', tImgSaved:'Image saved', tImgReady:'Image ready', tFail:'Failed. Try Copy text.',
+      histTitle:'History & charts', histEmpty:'History appears after you tap "New month" — the current month\'s data is saved here then.',
+      expenses:'Spending per month', thisYear:'This year', monthsWord:'mo.', avgWord:'average', perMonth:'/mo',
+      consumption:'Consumption', pastMonths:'Past months', chipDate:'due', chipDateTo:'by', chipMeter:'readings', chipLink:'link',
+      open:'Open', remove:'Remove', from:'from', to:'to', namePh:'Name', urlPh:'e.g. ignitis.lt',
+      used:'used', pricier:'more', cheaper:'less', overdueW:'Overdue', soonW:'Due soon', todayW:'today', inDays:'in {n} d.',
+      summaryTitle:'Bills', paidWord:'paid', allPaidShort:'All paid', calTitle:'Pay the bills', calDetails:'Utility bills. Due on the last day of the month.' },
+    ru: { defNames:['Холодная вода','Горячая вода','Электричество, газ','Мусор','Содержание дома'],
+      eyebrow:'Ежемесячные счета', title:'Калькулятор счетов', remind:'Напомнить', dueLabel:'Срок: до',
+      addRow:'Добавить строку', totalLabel:'Итого', remainLabel:'Осталось оплатить', allPaid:'Всё оплачено ✓',
+      shareBtn:'Поделиться суммой', historyBtn:'📊 История и графики', newMonth:'Новый месяц (очистить)',
+      savedAuto:'Сохраняется автоматически', savedTick:'Сохранено ✓',
+      hint:'📅 срок · 🔢 показания счётчиков (от–до) · 🌐 ссылка на сайт. Отмеченные даты: просроченные — красным, скорые — оранжевым.',
+      cancel:'Отмена', ok:'OK', startBtn:'Начать', nmTitle:'Начать новый месяц?',
+      nmBody:'• Месяц сменится на следующий\n• Суммы и отметки очистятся\n• Сроки сдвинутся на месяц вперёд\n• Показания «до» перейдут в «от»\n• Ссылки останутся',
+      nmDone:'Новый месяц начат', shareTitle:'Отправить сумму', shareAsImage:'Отправить картинкой',
+      orText:'или отправить текстом', copyText:'Копировать текст', close:'Закрыть',
+      tCopied:'Скопировано', tCopyHold:'Выдели текст и нажми «Копировать»', tImgSaved:'Картинка сохранена', tImgReady:'Картинка готова', tFail:'Не удалось. Попробуй «Копировать текст».',
+      histTitle:'История и графики', histEmpty:'История появится после нажатия «Новый месяц» — тогда данные текущего месяца сохранятся здесь.',
+      expenses:'Расходы по месяцам', thisYear:'В этом году', monthsWord:'мес.', avgWord:'в среднем', perMonth:'/мес.',
+      consumption:'Потребление', pastMonths:'Прошлые месяцы', chipDate:'срок', chipDateTo:'до', chipMeter:'показания', chipLink:'ссылка',
+      open:'Открыть', remove:'Удалить', from:'от', to:'до', namePh:'Название', urlPh:'напр. ignitis.lt',
+      used:'израсходовано', pricier:'дороже', cheaper:'дешевле', overdueW:'Просрочено', soonW:'Скоро оплата', todayW:'сегодня', inDays:'через {n} дн.',
+      summaryTitle:'Счета', paidWord:'оплачено', allPaidShort:'Всё оплачено', calTitle:'Оплатить счета', calDetails:'Коммунальные счета. Срок — последний день месяца.' },
+    lv: { defNames:['Aukstais ūdens','Karstais ūdens','Elektrība, gāze','Atkritumi','Nama apsaimniekošana'],
+      eyebrow:'Mēneša rēķini', title:'Rēķinu kalkulators', remind:'Atgādināt', dueLabel:'Termiņš: līdz',
+      addRow:'Pievienot rindu', totalLabel:'Kopā', remainLabel:'Atlicis samaksāt', allPaid:'Viss samaksāts ✓',
+      shareBtn:'Dalīties ar summu', historyBtn:'📊 Vēsture un grafiki', newMonth:'Jauns mēnesis (notīrīt)',
+      savedAuto:'Saglabāts automātiski', savedTick:'Saglabāts ✓',
+      hint:'📅 termiņš · 🔢 skaitītāju rādījumi (no–līdz) · 🌐 vietnes saite. Atzīmētie datumi: nokavētie sarkani, tuvojošies oranži.',
+      cancel:'Atcelt', ok:'Labi', startBtn:'Sākt', nmTitle:'Sākt jaunu mēnesi?',
+      nmBody:'• Mēnesis mainīsies uz nākamo\n• Summas un atzīmes notīrīsies\n• Termiņi pārcelsies mēnesi uz priekšu\n• Rādījumi “līdz” pārcelsies uz “no”\n• Saites paliks',
+      nmDone:'Jauns mēnesis sākts', shareTitle:'Nosūtīt summu', shareAsImage:'Sūtīt kā attēlu',
+      orText:'vai sūtīt kā tekstu', copyText:'Kopēt tekstu', close:'Aizvērt',
+      tCopied:'Nokopēts', tCopyHold:'Atlasi tekstu un nospied Kopēt', tImgSaved:'Attēls saglabāts', tImgReady:'Attēls gatavs', tFail:'Neizdevās. Mēģini Kopēt tekstu.',
+      histTitle:'Vēsture un grafiki', histEmpty:'Vēsture parādīsies, kad nospiedīsi “Jauns mēnesis” — tad šī mēneša dati saglabāsies šeit.',
+      expenses:'Izdevumi pa mēnešiem', thisYear:'Šogad', monthsWord:'mēn.', avgWord:'vidēji', perMonth:'/mēn.',
+      consumption:'Patēriņš', pastMonths:'Iepriekšējie mēneši', chipDate:'termiņš', chipDateTo:'līdz', chipMeter:'rādījumi', chipLink:'saite',
+      open:'Atvērt', remove:'Noņemt', from:'no', to:'līdz', namePh:'Nosaukums', urlPh:'piem. ignitis.lt',
+      used:'patērēts', pricier:'dārgāk', cheaper:'lētāk', overdueW:'Nokavēts', soonW:'Drīz jāmaksā', todayW:'šodien', inDays:'pēc {n} d.',
+      summaryTitle:'Rēķini', paidWord:'samaksāts', allPaidShort:'Viss samaksāts', calTitle:'Samaksāt rēķinus', calDetails:'Komunālie rēķini. Termiņš — mēneša pēdējā diena.' },
+    et: { defNames:['Külm vesi','Kuum vesi','Elekter, gaas','Prügi','Majahaldus'],
+      eyebrow:'Kuu arved', title:'Arvete kalkulaator', remind:'Tuleta meelde', dueLabel:'Tähtaeg: kuni',
+      addRow:'Lisa rida', totalLabel:'Kokku', remainLabel:'Maksta jäänud', allPaid:'Kõik makstud ✓',
+      shareBtn:'Jaga summat', historyBtn:'📊 Ajalugu ja graafikud', newMonth:'Uus kuu (tühjenda)',
+      savedAuto:'Salvestatakse automaatselt', savedTick:'Salvestatud ✓',
+      hint:'📅 tähtaeg · 🔢 arvesti näidud (alates–kuni) · 🌐 veebilink. Märgitud kuupäevad: hilinenud punased, lähenevad oranžid.',
+      cancel:'Tühista', ok:'Olgu', startBtn:'Alusta', nmTitle:'Alustada uut kuud?',
+      nmBody:'• Kuu vahetub järgmiseks\n• Summad ja märked tühjenevad\n• Tähtajad nihkuvad kuu edasi\n• Näit „kuni" liigub „alates"\n• Lingid jäävad',
+      nmDone:'Uus kuu alustatud', shareTitle:'Saada summa', shareAsImage:'Saada pildina',
+      orText:'või saada tekstina', copyText:'Kopeeri tekst', close:'Sulge',
+      tCopied:'Kopeeritud', tCopyHold:'Vali tekst ja vajuta Kopeeri', tImgSaved:'Pilt salvestatud', tImgReady:'Pilt valmis', tFail:'Ebaõnnestus. Proovi Kopeeri tekst.',
+      histTitle:'Ajalugu ja graafikud', histEmpty:'Ajalugu ilmub pärast „Uus kuu" vajutamist — siis salvestatakse praeguse kuu andmed siia.',
+      expenses:'Kulud kuude kaupa', thisYear:'Sel aastal', monthsWord:'kuud', avgWord:'keskmiselt', perMonth:'/kuus',
+      consumption:'Tarbimine', pastMonths:'Möödunud kuud', chipDate:'tähtaeg', chipDateTo:'kuni', chipMeter:'näidud', chipLink:'link',
+      open:'Ava', remove:'Eemalda', from:'alates', to:'kuni', namePh:'Nimi', urlPh:'nt ignitis.lt',
+      used:'tarbitud', pricier:'kallim', cheaper:'odavam', overdueW:'Hilinenud', soonW:'Varsti maksta', todayW:'täna', inDays:'{n} p pärast',
+      summaryTitle:'Arved', paidWord:'makstud', allPaidShort:'Kõik makstud', calTitle:'Maksa arved', calDetails:'Kommunaalarved. Tähtaeg — kuu viimane päev.' }
+  };
+  function loadLang() { let v=''; try { v = localStorage.getItem(LANG_KEY) || ''; } catch(e){} return I18N[v] ? v : 'lt'; }
+  let lang = loadLang();
+  function t(k) { return (I18N[lang] && I18N[lang][k] != null) ? I18N[lang][k] : I18N.lt[k]; }
+  function loc() { return LOCALE[lang] || 'lt-LT'; }
+  function defaultRowsFor(l) { return I18N[l].defNames.map(n => ({ name:n, amount:'', paid:false, url:'', due:'', mFrom:'', mTo:'' })); }
+  function defaultRows() { return defaultRowsFor(lang); }
 
   const rowsEl = document.getElementById('rows');
   const totalEl = document.getElementById('total');
@@ -246,7 +343,7 @@
   function todayStart() { const d = new Date(); d.setHours(0,0,0,0); return d; }
   function parseDue(s) { if (!s) return null; const d = new Date(s + 'T00:00:00'); return isNaN(d) ? null : d; }
   function daysUntil(s) { const d = parseDue(s); if (!d) return null; return Math.round((d - todayStart()) / 86400000); }
-  function fmtDue(s) { const d = parseDue(s); if (!d) return ''; return d.toLocaleDateString('lt-LT', { day: 'numeric', month: 'long' }); }
+  function fmtDue(s) { const d = parseDue(s); if (!d) return ''; return d.toLocaleDateString(loc(), { day: 'numeric', month: 'long' }); }
 
   // ---- toast + modal ----
   const toastEl = document.getElementById('toast');
@@ -267,7 +364,7 @@
 
   // ---- mėnuo ----
   function currentMonthValue() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
-  function monthText(val) { if (!val) return ''; const [y,m] = val.split('-').map(Number); const s = new Date(y, m-1, 1).toLocaleDateString('lt-LT', { year:'numeric', month:'long' }); return s.charAt(0).toUpperCase() + s.slice(1); }
+  function monthText(val) { if (!val) return ''; const [y,m] = val.split('-').map(Number); const s = new Date(y, m-1, 1).toLocaleDateString(loc(), { year:'numeric', month:'long' }); return s.charAt(0).toUpperCase() + s.slice(1); }
   function nextMonthValue(val) { let [y,m] = val.split('-').map(Number); m += 1; if (m > 12) { m = 1; y += 1; } return y + '-' + String(m).padStart(2,'0'); }
   function getMonth() { let v=''; try { v = localStorage.getItem(MONTH_KEY) || ''; } catch(e){} return v || currentMonthValue(); }
   function setMonth(v) { try { localStorage.setItem(MONTH_KEY, v); } catch(e){} monthInput.value = v; monthLabel.textContent = monthText(v); updateDueUI(); scheduleCloud(); }
@@ -307,7 +404,7 @@
         if (o) { const d = JSON.parse(o); if (Array.isArray(d) && d.length) return d.map(x => ({ ...x, url:x.url||'', due:x.due||'', mFrom:x.mFrom||'', mTo:x.mTo||'' })); }
       }
     } catch(e){}
-    return defaults;
+    return defaultRows();
   }
   function save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(collectRows())); } catch(e){}
@@ -326,7 +423,7 @@
       if (!paid && du !== null) {
         const nm = row.querySelector('.name').value.trim() || 'Sąskaita';
         if (du < 0) { row.classList.add('is-over'); overdue.push(nm); }
-        else if (du <= 3) { row.classList.add('is-due'); soon.push(nm + (du===0 ? ' (šiandien)' : ` (po ${du} d.)`)); }
+        else if (du <= 3) { row.classList.add('is-due'); soon.push(nm + (du===0 ? ` (${t('todayW')})` : ' (' + t('inDays').replace('{n}', du) + ')')); }
       }
       // palyginimas su praeitu mėnesiu (toje pačioje eilutėje)
       const diffEl = row.querySelector('.rowdiff');
@@ -337,7 +434,7 @@
           const d = +(v - prevItem.amount).toFixed(2);
           if (Math.abs(d) < 0.005) { diffEl.style.display = 'none'; }
           else {
-            diffEl.textContent = (d > 0 ? '▲ ' : '▼ ') + fmt(Math.abs(d)) + (d > 0 ? ' brangiau' : ' pigiau');
+            diffEl.textContent = (d > 0 ? '▲ ' : '▼ ') + fmt(Math.abs(d)) + ' ' + (d > 0 ? t('pricier') : t('cheaper'));
             diffEl.className = 'rowdiff ' + (d > 0 ? 'up' : 'down');
             diffEl.style.display = '';
           }
@@ -347,10 +444,10 @@
     totalEl.textContent = fmt(total);
     const done = remaining === 0 && total > 0;
     remainEl.classList.toggle('done', done);
-    remainEl.textContent = done ? 'Viskas apmokėta ✓' : fmt(remaining);
+    remainEl.textContent = done ? t('allPaid') : fmt(remaining);
     let msg = '';
-    if (overdue.length) msg += `<b>Pradelsta:</b> ${overdue.join(', ')}.`;
-    if (soon.length) msg += (msg ? '<br>' : '') + `<b>Greitai mokėti:</b> ${soon.join(', ')}.`;
+    if (overdue.length) msg += `<b>${t('overdueW')}:</b> ${overdue.join(', ')}.`;
+    if (soon.length) msg += (msg ? '<br>' : '') + `<b>${t('soonW')}:</b> ${soon.join(', ')}.`;
     alertEl.innerHTML = msg;
     alertEl.classList.toggle('show', !!msg);
   }
@@ -372,9 +469,9 @@
     const { items, total, remaining } = collectSummaryData();
     const div = '━━━━━━━━━━━━━━━';
     const lines = items.map(it => `${it.name} — ${fmt(it.amount)}${it.paid ? ' ✓' : ''}`);
-    let text = `💶 Sąskaitos · ${monthText(getMonth())}\n${div}\n` + lines.join('\n') + `\n${div}\nIš viso: ${fmt(total)}`;
-    if (remaining !== total && remaining > 0) text += `\nLiko sumokėti: ${fmt(remaining)}`;
-    if (remaining === 0 && total > 0) text += `\n✅ Viskas apmokėta`;
+    let text = `💶 ${t('summaryTitle')} · ${monthText(getMonth())}\n${div}\n` + lines.join('\n') + `\n${div}\n${t('totalLabel')}: ${fmt(total)}`;
+    if (remaining !== total && remaining > 0) text += `\n${t('remainLabel')}: ${fmt(remaining)}`;
+    if (remaining === 0 && total > 0) text += `\n✅ ${t('allPaidShort')}`;
     return text;
   }
 
@@ -406,7 +503,7 @@
 
     ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
     ctx.fillStyle = '#6b7a70'; ctx.font = '600 14px ' + sans;
-    ctx.fillText('MĖNESIO SĄSKAITOS', padX, 68);
+    ctx.fillText(t('eyebrow').toUpperCase(), padX, 68);
     ctx.fillStyle = '#1c2620'; ctx.font = '600 30px ' + serif;
     ctx.fillText(monthText(getMonth()), padX, 106);
 
@@ -427,12 +524,12 @@
     const by = y + 20, bh = totalH - 18;
     roundRect(ctx, padX, by, W - padX * 2, bh, 16); ctx.fillStyle = '#1c2620'; ctx.fill();
     ctx.textAlign = 'left'; ctx.fillStyle = '#b9c7bd'; ctx.font = '600 14px ' + sans;
-    ctx.fillText('IŠ VISO', padX + 26, by + (showRemaining ? 36 : bh / 2));
+    ctx.fillText(t('totalLabel').toUpperCase(), padX + 26, by + (showRemaining ? 36 : bh / 2));
     ctx.textAlign = 'right'; ctx.fillStyle = '#ffffff'; ctx.font = '600 32px ' + serif;
     ctx.fillText(fmt(total), W - padX - 26, by + (showRemaining ? 40 : bh / 2));
     if (showRemaining) {
       ctx.textAlign = 'left'; ctx.fillStyle = '#9fb3a6'; ctx.font = '500 14px ' + sans;
-      ctx.fillText('Liko sumokėti', padX + 26, by + 92);
+      ctx.fillText(t('remainLabel'), padX + 26, by + 92);
       ctx.textAlign = 'right'; ctx.fillStyle = '#7fd6aa'; ctx.font = '600 20px ' + serif;
       ctx.fillText(fmt(remaining), W - padX - 26, by + 92);
     }
@@ -471,7 +568,7 @@
       if (window.claude && window.claude.use) {
         try {
           const dl = await window.claude.use('downloads');
-          if (dl) { await dl.save({ filename: 'saskaitos.png', data: shareBlob }); toast('Paveikslėlis išsaugotas — nusiųsk jį Messenger'); return; }
+          if (dl) { await dl.save({ filename: 'saskaitos.png', data: shareBlob }); toast(t('tImgSaved')); return; }
         } catch(e) { if (e && e.code === 'declined') return; }
       }
       // 3) paskutinė išeitis
@@ -479,23 +576,23 @@
       const a = document.createElement('a'); a.href = url; a.download = 'saskaitos.png';
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 5000);
-      toast('Paveikslėlis paruoštas');
-    } catch(e) { toast('Nepavyko. Pabandyk „Kopijuoti tekstą".'); }
+      toast(t('tImgReady'));
+    } catch(e) { toast(t('tFail')); }
   });
 
   document.getElementById('shareClose').addEventListener('click', () => shareOverlay.classList.remove('show'));
   shareOverlay.addEventListener('click', e => { if (e.target === shareOverlay) shareOverlay.classList.remove('show'); });
   document.getElementById('shareCopy').addEventListener('click', async () => {
     const text = shareTextEl.value;
-    try { await navigator.clipboard.writeText(text); toast('Nukopijuota — atidaryk Messenger ir įklijuok'); }
-    catch(e) { shareTextEl.focus(); shareTextEl.select(); toast('Palaikyk tekstą ir paspausk „Kopijuoti"'); }
+    try { await navigator.clipboard.writeText(text); toast(t('tCopied')); }
+    catch(e) { shareTextEl.focus(); shareTextEl.select(); toast(t('tCopyHold')); }
   });
 
   function normalizeUrl(u) { u = (u||'').trim(); if (!u) return ''; if (!/^https?:\/\//i.test(u)) u = 'https://' + u; return u; }
   function refreshDateChip(row) {
     const chip = row.querySelector('.chip.date'); const label = chip.querySelector('.lbl');
-    if (row.dataset.due) { chip.classList.add('has'); label.textContent = 'iki ' + fmtDue(row.dataset.due); }
-    else { chip.classList.remove('has'); label.textContent = 'terminas'; }
+    if (row.dataset.due) { chip.classList.add('has'); label.textContent = t('chipDateTo') + ' ' + fmtDue(row.dataset.due); }
+    else { chip.classList.remove('has'); label.textContent = t('chipDate'); }
   }
   function refreshMeter(row) {
     const chip = row.querySelector('.chip.meter');
@@ -503,8 +600,8 @@
     const to = row.querySelector('.m-to').value.trim();
     const sumEl = row.querySelector('.meter-sum');
     chip.classList.toggle('has', !!(from || to));
-    const f = num(from), t = num(to);
-    if (f !== null && t !== null) { sumEl.textContent = `sunaudota: ${(t - f)}`; sumEl.style.display = ''; }
+    const f = num(from), tv = num(to);
+    if (f !== null && tv !== null) { sumEl.textContent = `${t('used')}: ${(tv - f)}`; sumEl.style.display = ''; }
     else { sumEl.textContent = ''; sumEl.style.display = 'none'; }
   }
   function refreshLink(row) {
@@ -529,14 +626,14 @@
         <div class="meta-line">
           <button class="chip date" type="button"><span>📅</span><span class="lbl">terminas</span></button>
           <input class="date-input" type="date">
-          <button class="chip meter" type="button"><span>🔢</span><span>rodmenys</span></button>
-          <button class="chip link" type="button"><span>🌐</span><span>nuoroda</span></button>
+          <button class="chip meter" type="button"><span>🔢</span><span class="lbl-meter">rodmenys</span></button>
+          <button class="chip link" type="button"><span>🌐</span><span class="lbl-link">nuoroda</span></button>
           <button class="chip linkedit" type="button" style="display:none">✏️</button>
         </div>
         <div class="rowdiff" style="display:none"></div>
         <div class="panel meter-panel">
-          <label>nuo <input class="m-from" type="text" inputmode="decimal" placeholder="—"></label>
-          <label>iki <input class="m-to" type="text" inputmode="decimal" placeholder="—"></label>
+          <label><span class="lbl-from">nuo</span> <input class="m-from" type="text" inputmode="decimal" placeholder="—"></label>
+          <label><span class="lbl-to">iki</span> <input class="m-to" type="text" inputmode="decimal" placeholder="—"></label>
           <span class="meter-sum"></span>
         </div>
         <div class="panel link-panel">
@@ -553,6 +650,15 @@
         <button class="del" title="Pašalinti">×</button>
         <button class="ins" title="Pridėti eilutę žemiau">＋</button>
       </div>`;
+
+    row.querySelector('.name').placeholder = t('namePh');
+    row.querySelector('.lbl-meter').textContent = t('chipMeter');
+    row.querySelector('.lbl-link').textContent = t('chipLink');
+    row.querySelector('.lbl-from').textContent = t('from');
+    row.querySelector('.lbl-to').textContent = t('to');
+    row.querySelector('.link-in').placeholder = t('urlPh');
+    row.querySelector('.link-open').textContent = t('open');
+    row.querySelector('.link-remove').textContent = t('remove');
 
     row.querySelector('.name').value = item.name || '';
     row.querySelector('.amount-in').value = item.amount || '';
@@ -601,20 +707,19 @@
 
   function renderRows(rows) {
     rowsEl.innerHTML = '';
-    (rows && rows.length ? rows : defaults).forEach(it => makeRow(it));
+    (rows && rows.length ? rows : defaultRows()).forEach(it => makeRow(it));
     recalc();
   }
 
   // ---- pirminis piešimas iš vietinės atminties (greitai) ----
+  applyI18n();
   setMonthSilently(getMonth());
   renderRows(loadRows());
 
   document.getElementById('add').addEventListener('click', () => { makeRow(); rowsEl.lastElementChild.querySelector('.name').focus(); save(); });
 
   document.getElementById('clear').addEventListener('click', async () => {
-    const ok = await showConfirm('Pradėti naują mėnesį?',
-      '• Mėnuo pasikeis į kitą\n• Sumos ir varnelės išsivalys\n• Terminai pasislinks mėnesiu į priekį\n• Rodmenų „iki" persikels į „nuo"\n• Nuorodos liks',
-      'Pradėti');
+    const ok = await showConfirm(t('nmTitle'), t('nmBody'), t('startBtn'));
     if (!ok) return;
     snapshotCurrentMonth();
     rowsEl.querySelectorAll('.row').forEach(row => {
@@ -627,7 +732,7 @@
     });
     setMonth(nextMonthValue(getMonth()));
     update();
-    toast('Naujas mėnuo pradėtas');
+    toast(t('nmDone'));
   });
 
   // setMonth be debesų įrašo (naudojamas pirminiam piešimui)
@@ -645,13 +750,14 @@
     cloudTimer = null;
     if (!dbDoc) return;
     try {
-      await dbDoc.set({ rows: collectRows(), month: getMonth(), history: history, updatedAt: Date.now() });
-      savedNote.textContent = 'Įrašyta ✓';
-      setTimeout(() => { savedNote.textContent = 'Įrašyta automatiškai'; }, 1500);
+      await dbDoc.set({ rows: collectRows(), month: getMonth(), history: history, lang: lang, updatedAt: Date.now() });
+      savedNote.textContent = t('savedTick');
+      setTimeout(() => { savedNote.textContent = t('savedAuto'); }, 1500);
     } catch(e) {}
   }
   function applyState(d) {
     applying = true;
+    if (d.lang && I18N[d.lang] && d.lang !== lang) { lang = d.lang; try { localStorage.setItem(LANG_KEY, lang); } catch(e){} applyI18n(); }
     if (Array.isArray(d.history)) { history = d.history; saveHistoryLocal(); }
     renderRows(d.rows);
     if (d.month) setMonthSilently(d.month);
@@ -709,16 +815,16 @@
     if (!dueText || !calBtn) return;
     const mv = getMonth();
     const d = lastDayOfMonthDate(mv);
-    dueText.textContent = 'Terminas: iki ' + d.toLocaleDateString('lt-LT', { day: 'numeric', month: 'long' });
+    dueText.textContent = t('dueLabel') + ' ' + d.toLocaleDateString(loc(), { day: 'numeric', month: 'long' });
     const end = new Date(d); end.setDate(end.getDate() + 1);
-    const title = encodeURIComponent('Apmokėti sąskaitas (' + monthText(mv) + ')');
-    const details = encodeURIComponent('Komunalinės sąskaitos. Terminas – paskutinė mėnesio diena.');
+    const title = encodeURIComponent(t('calTitle') + ' (' + monthText(mv) + ')');
+    const details = encodeURIComponent(t('calDetails'));
     calBtn.href = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + title + '&dates=' + ymdCompact(d) + '/' + ymdCompact(end) + '&details=' + details;
   }
 
   // ---- istorijos langas ----
   const histOverlay = document.getElementById('histOverlay');
-  function shortMonth(mv) { const [y,m] = mv.split('-').map(Number); return new Date(y, m-1, 1).toLocaleDateString('lt-LT', { month: 'short' }); }
+  function shortMonth(mv) { const [y,m] = mv.split('-').map(Number); return new Date(y, m-1, 1).toLocaleDateString(loc(), { month: 'short' }); }
 
   function drawChart(data) {
     const canvas = document.getElementById('histChart');
@@ -761,9 +867,9 @@
     const yearTotal = yearEntries.reduce((s, e) => s + e.total, 0);
     const yearAvg = yearEntries.length ? yearTotal / yearEntries.length : 0;
     document.getElementById('histYear').innerHTML =
-      '<div class="hist-h">Šiais metais (' + yearStr + ')</div>' +
+      '<div class="hist-h">' + t('thisYear') + ' (' + yearStr + ')</div>' +
       '<div class="year-card"><div><div class="yc-main">' + fmt(yearTotal) + '</div>' +
-      '<div class="yc-sub">' + yearEntries.length + ' mėn. · vidutiniškai ' + fmt(yearAvg) + '/mėn.</div></div></div>';
+      '<div class="yc-sub">' + yearEntries.length + ' ' + t('monthsWord') + ' · ' + t('avgWord') + ' ' + fmt(yearAvg) + t('perMonth') + '</div></div></div>';
 
     // grafikas
     drawChart(all.filter(e => e.total > 0).slice(-12));
@@ -774,7 +880,7 @@
     all.forEach(e => (e.meters || []).forEach(m => { if (meterNames.indexOf(m.name) < 0) meterNames.push(m.name); }));
     if (meterNames.length) {
       const cols = all.filter(e => (e.meters || []).length).slice(-6);
-      let html = '<div class="hist-h">Suvartojimas</div><table class="ctable"><thead><tr><th></th>';
+      let html = '<div class="hist-h">' + t('consumption') + '</div><table class="ctable"><thead><tr><th></th>';
       cols.forEach(c => html += '<th>' + shortMonth(c.month) + '</th>');
       html += '</tr></thead><tbody>';
       meterNames.forEach(nm => {
@@ -789,7 +895,7 @@
     // praėję mėnesiai
     const listEl = document.getElementById('histList');
     if (history.length) {
-      let html = '<div class="hist-h">Praėję mėnesiai</div>';
+      let html = '<div class="hist-h">' + t('pastMonths') + '</div>';
       history.forEach(e => {
         html += '<details class="hist-month"><summary><span>' + e.label + '</span><span class="hm-total">' + fmt(e.total) + '</span></summary><ul>';
         (e.items || []).forEach(it => html += '<li><span>' + it.name + (it.paid ? ' ✓' : '') + '</span><span>' + fmt(it.amount) + '</span></li>');
@@ -802,6 +908,51 @@
   document.getElementById('historyBtn').addEventListener('click', () => { histOverlay.classList.add('show'); requestAnimationFrame(renderHistory); });
   document.getElementById('histClose').addEventListener('click', () => histOverlay.classList.remove('show'));
   histOverlay.addEventListener('click', e => { if (e.target === histOverlay) histOverlay.classList.remove('show'); });
+
+  // ---- kalbos taikymas ----
+  function setTxt(id, s) { const el = document.getElementById(id); if (el) el.textContent = s; }
+  function applyI18n() {
+    const sel = document.getElementById('langSel');
+    if (sel) sel.value = lang;
+    try { document.documentElement.lang = lang; } catch(e){}
+    setTxt('eyebrow', t('eyebrow'));
+    setTxt('title', t('title'));
+    setTxt('remindTxt', t('remind'));
+    setTxt('add', '+ ' + t('addRow'));
+    setTxt('totalLabel', t('totalLabel'));
+    setTxt('remainLabel', t('remainLabel'));
+    setTxt('share', t('shareBtn'));
+    setTxt('historyBtn', t('historyBtn'));
+    setTxt('clear', t('newMonth'));
+    setTxt('savedNote', t('savedAuto'));
+    setTxt('hintNote', t('hint'));
+    setTxt('mCancel', t('cancel'));
+    setTxt('shareTitle', t('shareTitle'));
+    setTxt('shareImage', t('shareAsImage'));
+    setTxt('shareOrText', t('orText'));
+    setTxt('shareCopy', t('copyText'));
+    setTxt('shareClose', t('close'));
+    setTxt('histTitle', t('histTitle'));
+    setTxt('histEmpty', t('histEmpty'));
+    setTxt('histChartH', t('expenses'));
+    setTxt('histClose', t('close'));
+  }
+
+  document.getElementById('langSel').addEventListener('change', (e) => {
+    const newLang = I18N[e.target.value] ? e.target.value : 'lt';
+    const oldLang = lang;
+    let data = collectRows();
+    const oldDef = I18N[oldLang].defNames;
+    const untouched = !history.length && data.length === oldDef.length &&
+      data.every((r, i) => r.name === oldDef[i] && !r.amount && !r.paid && !r.url && !r.due && !r.mFrom && !r.mTo);
+    lang = newLang;
+    try { localStorage.setItem(LANG_KEY, lang); } catch(err){}
+    if (untouched) data = defaultRowsFor(newLang);
+    applyI18n();
+    renderRows(data);
+    setMonthSilently(getMonth());
+    scheduleCloud();
+  });
 
   updateDueUI();
   initCloud();
