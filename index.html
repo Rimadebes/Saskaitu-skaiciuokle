@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sąskaitų skaičiuoklė</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap');
+  :root {
+    --ink: #1c2620; --muted: #6b7a70; --line: #e0e5dd; --water: #2f7d8c;
+    --paper: #f6f4ec; --card: #ffffff; --accent: #c4622d;
+    --paid: #2e9e6b; --paid-bg: #eaf7f0;
+    --due: #c98a16; --due-bg: #fdf4e3; --over: #c0392b; --over-bg: #fbeceb;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 26px 16px 70px; }
+  .wrap { width: 100%; max-width: 440px; }
+  header { margin-bottom: 16px; }
+  .eyebrow { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 29px; line-height: 1.1; letter-spacing: -0.01em; }
+  .month-btn { margin-top: 8px; border: 1.5px solid var(--line); background: var(--card); color: var(--water); font-family: inherit; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .month-btn:hover { border-color: var(--water); }
+  .month-input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+
+  .alert { background: var(--over-bg); border: 1px solid #f0cfcc; color: var(--over); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; font-size: 13.5px; line-height: 1.5; display: none; }
+  .alert.show { display: block; }
+  .alert b { font-weight: 600; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .row { display: flex; align-items: flex-start; gap: 6px; padding: 10px 10px 10px 8px; border-bottom: 1px solid var(--line); transition: background .15s; }
+  .row.is-paid { background: var(--paid-bg); }
+  .row.is-over:not(.is-paid) { background: var(--over-bg); }
+  .row.is-due:not(.is-paid):not(.is-over) { background: var(--due-bg); }
+
+  .check { flex: none; width: 30px; height: 30px; margin-top: 2px; border-radius: 50%; border: 2px solid #cfd8ce; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; color: transparent; transition: all .15s; }
+  .row.is-paid .check { background: var(--paid); border-color: var(--paid); color: #fff; }
+
+  .mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .name { width: 100%; font-size: 15px; font-weight: 500; border: none; background: transparent; color: var(--ink); font-family: inherit; padding: 4px 2px 2px; border-radius: 6px; outline: none; }
+  .name:focus { background: #eef3ed; }
+  .row.is-paid .name { color: var(--paid); }
+
+  .meta-line { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; padding-left: 2px; }
+  .chip { border: none; background: none; font-family: inherit; font-size: 11.5px; color: var(--muted); cursor: pointer; padding: 2px 5px; border-radius: 6px; display: flex; align-items: center; gap: 3px; }
+  .chip:hover { background: #eef3ed; }
+  .chip.has { color: var(--water); font-weight: 600; }
+  .row.is-over:not(.is-paid) .chip.date.has { color: var(--over); }
+  .row.is-due:not(.is-paid):not(.is-over) .chip.date.has { color: var(--due); }
+  .date-input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+
+  .panel { display: none; gap: 6px; align-items: center; padding: 6px 2px 2px; flex-wrap: wrap; }
+  .panel.show { display: flex; }
+  .panel label { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+  .panel input { font-family: 'Fraunces', serif; font-size: 14px; font-variant-numeric: tabular-nums; padding: 5px 7px; border: 1.5px solid #dfe6e7; border-radius: 8px; background: #f7faf9; color: var(--ink); outline: none; }
+  .panel input:focus { border-color: var(--water); background: #fff; }
+  .meter-panel input { width: 72px; text-align: right; }
+  .meter-sum { font-size: 11px; color: var(--water); font-weight: 600; }
+  .link-panel input { flex: 1; min-width: 120px; font-family: 'Inter', sans-serif; font-size: 13px; text-align: left; }
+  .link-open { font-size: 12px; font-weight: 600; color: #fff; background: var(--water); text-decoration: none; padding: 7px 12px; border-radius: 8px; white-space: nowrap; }
+  .link-open.disabled { background: #cdd6cc; pointer-events: none; }
+  .link-remove { font-size: 12px; font-weight: 600; color: var(--accent); background: none; border: none; cursor: pointer; padding: 7px 6px; }
+
+  .field { position: relative; width: 94px; flex: none; margin-top: 2px; }
+  .field input { width: 100%; font-family: 'Fraunces', serif; font-size: 16px; font-variant-numeric: tabular-nums; text-align: right; padding: 8px 18px 8px 5px; border: 1.5px solid #dfe6e7; border-radius: 9px; background: #f7faf9; color: var(--ink); outline: none; }
+  .field input:focus { border-color: var(--water); background: #fff; }
+  .field input::placeholder { color: #b6c4c5; }
+  .row.is-paid .field input { text-decoration: line-through; color: var(--paid); border-color: #bfe6d2; background: #f3fbf7; }
+  .field .eur { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); font-family: 'Fraunces', serif; font-size: 13px; color: var(--muted); pointer-events: none; }
+
+  .rowctl { flex: none; display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
+  .del { flex: none; width: 22px; height: 22px; border: none; background: none; color: #c3ccc2; font-size: 18px; line-height: 1; cursor: pointer; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .del:hover { color: var(--accent); background: #faf0ea; }
+  .ins { flex: none; width: 22px; height: 22px; border: none; background: none; color: #c3ccc2; font-size: 15px; line-height: 1; cursor: pointer; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .ins:hover { color: var(--water); background: #eef5f5; }
+
+  .add-bar { padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .add { width: 100%; border: 1.5px dashed #cdd6cc; background: none; color: var(--muted); font-family: inherit; font-size: 14px; font-weight: 600; padding: 11px; border-radius: 10px; cursor: pointer; }
+  .add:hover { border-color: var(--water); color: var(--water); }
+
+  .totals { background: var(--ink); color: #fff; padding: 16px 18px 18px; }
+  .tline { display: flex; align-items: baseline; justify-content: space-between; }
+  .tline + .tline { margin-top: 10px; padding-top: 12px; border-top: 1px solid #333f38; }
+  .t-label { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: #b9c7bd; font-weight: 600; }
+  .t-amount { font-family: 'Fraunces', serif; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .t-amount.big { font-size: 22px; color: #cdd8d0; }
+  .t-amount.main { font-size: 30px; }
+  .t-amount.main.done { color: var(--paid); }
+  .rowdiff { font-size: 11px; font-weight: 600; padding: 2px 2px 0; }
+  .rowdiff.up { color: var(--accent); }
+  .rowdiff.down { color: var(--paid); }
+
+  .share { width: 100%; margin-top: 14px; border: none; background: var(--water); color: #fff; font-family: inherit; font-size: 15px; font-weight: 600; padding: 14px; border-radius: 12px; cursor: pointer; }
+  .share:active { background: #276875; }
+  .history-btn { width: 100%; margin-top: 10px; border: 1.5px solid var(--line); background: var(--card); color: var(--ink); font-family: inherit; font-size: 14px; font-weight: 600; padding: 12px; border-radius: 12px; cursor: pointer; }
+  .history-btn:hover { border-color: var(--water); color: var(--water); }
+
+  .duebar { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; }
+  #dueText { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+  .cal-btn { font-size: 13px; font-weight: 600; color: #fff; background: var(--due); text-decoration: none; padding: 7px 12px; border-radius: 9px; white-space: nowrap; }
+
+  .hist-modal { max-width: 380px; max-height: 85vh; overflow-y: auto; }
+  .hist-empty { font-size: 13.5px; color: var(--muted); line-height: 1.55; padding: 10px 0 16px; }
+  .hist-sec { margin-bottom: 18px; }
+  .hist-h { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+  .year-card { background: var(--paper); border-radius: 12px; padding: 14px; display: flex; justify-content: space-between; align-items: baseline; }
+  .year-card .yc-main { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 600; color: var(--ink); }
+  .year-card .yc-sub { font-size: 12px; color: var(--muted); }
+  #histChart { width: 100%; height: 150px; display: block; }
+  .ctable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .ctable th, .ctable td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--line); }
+  .ctable th:first-child, .ctable td:first-child { text-align: left; color: var(--muted); font-weight: 500; }
+  .ctable thead th { color: var(--muted); font-weight: 600; font-size: 11px; }
+  .hist-month { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  .hist-month summary { display: flex; justify-content: space-between; cursor: pointer; font-weight: 600; font-size: 14px; list-style: none; }
+  .hist-month summary::-webkit-details-marker { display: none; }
+  .hist-month .hm-total { font-family: 'Fraunces', serif; color: var(--water); }
+  .hist-month ul { margin: 10px 0 0; padding: 0; list-style: none; }
+  .hist-month li { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); padding: 3px 0; }
+
+  footer { margin-top: 14px; text-align: center; }
+  .clear { background: none; border: none; color: var(--accent); font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 6px; }
+  .clear:hover { text-decoration: underline; }
+  .saved-note { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .hint-note { font-size: 11px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(28,38,32,.45); display: none; align-items: center; justify-content: center; padding: 24px; z-index: 50; }
+  .overlay.show { display: flex; }
+  .modal { background: #fff; border-radius: 16px; padding: 20px; max-width: 340px; width: 100%; }
+  .modal h3 { font-family: 'Fraunces', serif; font-size: 19px; margin-bottom: 8px; }
+  .modal p { font-size: 13.5px; color: var(--muted); line-height: 1.55; white-space: pre-line; margin-bottom: 16px; }
+  .modal-row { display: flex; gap: 10px; }
+  .modal-row button { flex: 1; font-family: inherit; font-size: 14px; font-weight: 600; padding: 11px; border-radius: 10px; border: none; cursor: pointer; }
+  .btn-cancel { background: #eef3ed; color: var(--ink); }
+  .btn-ok { background: var(--water); color: #fff; }
+  #shareText { width: 100%; height: 150px; border: 1.5px solid var(--line); border-radius: 10px; padding: 11px; font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.5; color: var(--ink); background: #f7faf9; resize: none; margin: 10px 0; }
+  .share-modal { max-width: 360px; }
+  #sharePreview { width: 100%; border-radius: 12px; border: 1px solid var(--line); margin-bottom: 14px; display: block; }
+  .btn-ok.wide, .btn-cancel.wide { width: 100%; font-family: inherit; font-size: 14px; font-weight: 600; padding: 12px; border-radius: 10px; border: none; cursor: pointer; }
+  #shareImage { width: 100%; font-family: inherit; font-size: 15px; font-weight: 600; padding: 13px; border-radius: 10px; border: none; cursor: pointer; margin-bottom: 10px; }
+  #shareTextWrap { margin-bottom: 10px; }
+  #shareTextWrap summary { font-size: 13px; color: var(--muted); cursor: pointer; padding: 6px 0; text-align: center; font-weight: 600; }
+  .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px); background: var(--ink); color: #fff; font-size: 13.5px; padding: 11px 18px; border-radius: 10px; opacity: 0; transition: all .25s; z-index: 60; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="eyebrow">Mėnesio sąskaitos</div>
+      <h1>Sąskaitų skaičiuoklė</h1>
+      <button class="month-btn" id="monthBtn"><span>📆</span><span id="monthLabel">—</span></button>
+      <input class="month-input" id="monthInput" type="month">
+    </header>
+
+    <div class="alert" id="alert"></div>
+
+    <div class="duebar">
+      <span id="dueText">Terminas: —</span>
+      <a class="cal-btn" id="calBtn" target="_blank" rel="noopener noreferrer">⏰ Priminti</a>
+    </div>
+
+    <div class="card">
+      <div id="rows"></div>
+      <div class="add-bar"><button class="add" id="add">+ Pridėti eilutę</button></div>
+      <div class="totals">
+        <div class="tline"><span class="t-label">Iš viso</span><span class="t-amount big" id="total">0,00 €</span></div>
+        <div class="tline"><span class="t-label">Liko sumokėti</span><span class="t-amount main" id="remaining">0,00 €</span></div>
+      </div>
+    </div>
+
+    <button class="share" id="share">Dalintis suma</button>
+    <button class="history-btn" id="historyBtn">📊 Istorija ir grafikai</button>
+
+    <footer>
+      <button class="clear" id="clear">Naujas mėnuo (išvalyti)</button>
+      <div class="saved-note" id="savedNote">Įrašyta automatiškai</div>
+      <div class="hint-note">📅 terminas · 🔢 skaitliukų rodmenys (nuo–iki) · 🌐 svetainės nuoroda. Pažymėtos datos: pradelstos raudonai, artėjančios oranžiniai.</div>
+    </footer>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h3 id="mTitle"></h3>
+      <p id="mBody"></p>
+      <div class="modal-row">
+        <button class="btn-cancel" id="mCancel">Atšaukti</button>
+        <button class="btn-ok" id="mOk">Gerai</button>
+      </div>
+    </div>
+  </div>
+  <div class="overlay" id="shareOverlay">
+    <div class="modal share-modal">
+      <h3>Siųsti sumą</h3>
+      <img id="sharePreview" alt="Sąskaitų kortelė">
+      <button class="btn-ok" id="shareImage">Siųsti kaip paveikslėlį</button>
+      <details id="shareTextWrap">
+        <summary>arba siųsti tekstu</summary>
+        <textarea id="shareText" readonly></textarea>
+        <button class="btn-cancel wide" id="shareCopy">Kopijuoti tekstą</button>
+      </details>
+      <button class="btn-cancel wide" id="shareClose">Uždaryti</button>
+    </div>
+  </div>
+  <div class="overlay" id="histOverlay">
+    <div class="modal hist-modal">
+      <h3>Istorija ir grafikai</h3>
+      <div id="histEmpty" class="hist-empty">Istorija atsiras, kai paspausi „Naujas mėnuo" — tada dabartinio mėnesio duomenys išsisaugos čia.</div>
+      <div id="histBody">
+        <div class="hist-sec" id="histYear"></div>
+        <div class="hist-sec">
+          <div class="hist-h">Išlaidos per mėnesį</div>
+          <canvas id="histChart"></canvas>
+        </div>
+        <div class="hist-sec" id="histConsumption"></div>
+        <div class="hist-sec" id="histList"></div>
+      </div>
+      <button class="btn-cancel wide" id="histClose">Uždaryti</button>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+<script>
+  const STORAGE_KEY = 'saskaitos_v4';
+  const MONTH_KEY = 'saskaitos_menuo';
+  const HIST_KEY = 'saskaitos_history';
+  let history = loadHistoryLocal();
+  const defaults = [
+    { name: 'Šaltas vanduo',  amount: '', paid: false, url: '', due: '', mFrom: '', mTo: '' },
+    { name: 'Karštas vanduo', amount: '', paid: false, url: '', due: '', mFrom: '', mTo: '' },
+    { name: 'Elektra, dujos', amount: '', paid: false, url: '', due: '', mFrom: '', mTo: '' },
+    { name: 'Šiukšlės',       amount: '', paid: false, url: '', due: '', mFrom: '', mTo: '' },
+    { name: 'Būtų ūkis',      amount: '', paid: false, url: '', due: '', mFrom: '', mTo: '' }
+  ];
+
+  const rowsEl = document.getElementById('rows');
+  const totalEl = document.getElementById('total');
+  const remainEl = document.getElementById('remaining');
+  const alertEl = document.getElementById('alert');
+  const monthBtn = document.getElementById('monthBtn');
+  const monthInput = document.getElementById('monthInput');
+  const monthLabel = document.getElementById('monthLabel');
+  const savedNote = document.getElementById('savedNote');
+
+  function fmt(n) { return n.toFixed(2).replace('.', ',') + ' €'; }
+  function num(s) { const v = parseFloat((s||'').replace(',', '.')); return isNaN(v) ? null : v; }
+  function todayStart() { const d = new Date(); d.setHours(0,0,0,0); return d; }
+  function parseDue(s) { if (!s) return null; const d = new Date(s + 'T00:00:00'); return isNaN(d) ? null : d; }
+  function daysUntil(s) { const d = parseDue(s); if (!d) return null; return Math.round((d - todayStart()) / 86400000); }
+  function fmtDue(s) { const d = parseDue(s); if (!d) return ''; return d.toLocaleDateString('lt-LT', { day: 'numeric', month: 'long' }); }
+
+  // ---- toast + modal ----
+  const toastEl = document.getElementById('toast');
+  let toastT = null;
+  function toast(msg) { toastEl.textContent = msg; toastEl.classList.add('show'); if (toastT) clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove('show'), 2200); }
+  const overlay = document.getElementById('overlay');
+  let onOk = null;
+  function showConfirm(title, body, okText) {
+    document.getElementById('mTitle').textContent = title;
+    document.getElementById('mBody').textContent = body;
+    document.getElementById('mOk').textContent = okText || 'Gerai';
+    overlay.classList.add('show');
+    return new Promise(res => { onOk = res; });
+  }
+  document.getElementById('mOk').addEventListener('click', () => { overlay.classList.remove('show'); if (onOk) onOk(true); });
+  document.getElementById('mCancel').addEventListener('click', () => { overlay.classList.remove('show'); if (onOk) onOk(false); });
+  overlay.addEventListener('click', e => { if (e.target === overlay) { overlay.classList.remove('show'); if (onOk) onOk(false); } });
+
+  // ---- mėnuo ----
+  function currentMonthValue() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
+  function monthText(val) { if (!val) return ''; const [y,m] = val.split('-').map(Number); const s = new Date(y, m-1, 1).toLocaleDateString('lt-LT', { year:'numeric', month:'long' }); return s.charAt(0).toUpperCase() + s.slice(1); }
+  function nextMonthValue(val) { let [y,m] = val.split('-').map(Number); m += 1; if (m > 12) { m = 1; y += 1; } return y + '-' + String(m).padStart(2,'0'); }
+  function getMonth() { let v=''; try { v = localStorage.getItem(MONTH_KEY) || ''; } catch(e){} return v || currentMonthValue(); }
+  function setMonth(v) { try { localStorage.setItem(MONTH_KEY, v); } catch(e){} monthInput.value = v; monthLabel.textContent = monthText(v); updateDueUI(); scheduleCloud(); }
+  monthBtn.addEventListener('click', () => { if (monthInput.showPicker) { try { monthInput.showPicker(); return; } catch(e){} } monthInput.focus(); monthInput.click(); });
+  monthInput.addEventListener('change', () => { if (monthInput.value) setMonth(monthInput.value); });
+
+  function advanceDueByMonth(s) {
+    if (!s) return s;
+    const [y,m,d] = s.split('-').map(Number);
+    let ny=y, nm=m+1; if (nm>12){ nm=1; ny+=1; }
+    const lastDay = new Date(ny, nm, 0).getDate();
+    return ny + '-' + String(nm).padStart(2,'0') + '-' + String(Math.min(d,lastDay)).padStart(2,'0');
+  }
+
+  // ---- state ----
+  function collectRows() {
+    const data = [];
+    rowsEl.querySelectorAll('.row').forEach(row => {
+      data.push({
+        name: row.querySelector('.name').value,
+        amount: row.querySelector('.amount-in').value,
+        paid: row.classList.contains('is-paid'),
+        url: row.querySelector('.link-in').value.trim(),
+        due: row.dataset.due || '',
+        mFrom: row.querySelector('.m-from').value,
+        mTo: row.querySelector('.m-to').value
+      });
+    });
+    return data;
+  }
+  function loadRows() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) { const d = JSON.parse(raw); if (Array.isArray(d) && d.length) return d; }
+      for (const old of ['saskaitos_v3','saskaitos_v2','saskaitos_v1']) {
+        const o = localStorage.getItem(old);
+        if (o) { const d = JSON.parse(o); if (Array.isArray(d) && d.length) return d.map(x => ({ ...x, url:x.url||'', due:x.due||'', mFrom:x.mFrom||'', mTo:x.mTo||'' })); }
+      }
+    } catch(e){}
+    return defaults;
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(collectRows())); } catch(e){}
+    scheduleCloud();
+  }
+
+  function recalc() {
+    let total = 0, remaining = 0; const overdue = [], soon = [];
+    const prevItems = (history && history.length) ? (history[0].items || []) : null;
+    rowsEl.querySelectorAll('.row').forEach(row => {
+      const v = num(row.querySelector('.amount-in').value);
+      const paid = row.classList.contains('is-paid');
+      if (v !== null) { total += v; if (!paid) remaining += v; }
+      row.classList.remove('is-over','is-due');
+      const du = daysUntil(row.dataset.due);
+      if (!paid && du !== null) {
+        const nm = row.querySelector('.name').value.trim() || 'Sąskaita';
+        if (du < 0) { row.classList.add('is-over'); overdue.push(nm); }
+        else if (du <= 3) { row.classList.add('is-due'); soon.push(nm + (du===0 ? ' (šiandien)' : ` (po ${du} d.)`)); }
+      }
+      // palyginimas su praeitu mėnesiu (toje pačioje eilutėje)
+      const diffEl = row.querySelector('.rowdiff');
+      if (diffEl) {
+        const nm2 = row.querySelector('.name').value.trim();
+        const prevItem = (prevItems && nm2) ? prevItems.find(it => it.name === nm2 && typeof it.amount === 'number') : null;
+        if (v !== null && prevItem) {
+          const d = +(v - prevItem.amount).toFixed(2);
+          if (Math.abs(d) < 0.005) { diffEl.style.display = 'none'; }
+          else {
+            diffEl.textContent = (d > 0 ? '▲ ' : '▼ ') + fmt(Math.abs(d)) + (d > 0 ? ' brangiau' : ' pigiau');
+            diffEl.className = 'rowdiff ' + (d > 0 ? 'up' : 'down');
+            diffEl.style.display = '';
+          }
+        } else { diffEl.style.display = 'none'; }
+      }
+    });
+    totalEl.textContent = fmt(total);
+    const done = remaining === 0 && total > 0;
+    remainEl.classList.toggle('done', done);
+    remainEl.textContent = done ? 'Viskas apmokėta ✓' : fmt(remaining);
+    let msg = '';
+    if (overdue.length) msg += `<b>Pradelsta:</b> ${overdue.join(', ')}.`;
+    if (soon.length) msg += (msg ? '<br>' : '') + `<b>Greitai mokėti:</b> ${soon.join(', ')}.`;
+    alertEl.innerHTML = msg;
+    alertEl.classList.toggle('show', !!msg);
+  }
+  function update() { recalc(); save(); }
+
+  function collectSummaryData() {
+    let total = 0, remaining = 0; const items = [];
+    rowsEl.querySelectorAll('.row').forEach(row => {
+      const name = row.querySelector('.name').value.trim() || 'Be pavadinimo';
+      const v = num(row.querySelector('.amount-in').value);
+      if (v === null) return;
+      const paid = row.classList.contains('is-paid');
+      total += v; if (!paid) remaining += v;
+      items.push({ name, amount: v, paid });
+    });
+    return { items, total, remaining };
+  }
+  function buildSummary() {
+    const { items, total, remaining } = collectSummaryData();
+    const div = '━━━━━━━━━━━━━━━';
+    const lines = items.map(it => `${it.name} — ${fmt(it.amount)}${it.paid ? ' ✓' : ''}`);
+    let text = `💶 Sąskaitos · ${monthText(getMonth())}\n${div}\n` + lines.join('\n') + `\n${div}\nIš viso: ${fmt(total)}`;
+    if (remaining !== total && remaining > 0) text += `\nLiko sumokėti: ${fmt(remaining)}`;
+    if (remaining === 0 && total > 0) text += `\n✅ Viskas apmokėta`;
+    return text;
+  }
+
+  // ---- gražus paveikslėlis ----
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  async function renderCard() {
+    try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch(e){}
+    const { items, total, remaining } = collectSummaryData();
+    const showRemaining = remaining > 0 && remaining !== total;
+    const dpr = 2, W = 720, padX = 48, headerH = 150, rowH = 62;
+    const totalH = showRemaining ? 150 : 110;
+    const H = headerH + items.length * rowH + 30 + totalH + 50;
+    const c = document.createElement('canvas');
+    c.width = W * dpr; c.height = H * dpr;
+    const ctx = c.getContext('2d'); ctx.scale(dpr, dpr);
+    const serif = 'Georgia, "Times New Roman", serif';
+    const sans = 'Inter, system-ui, sans-serif';
+
+    ctx.fillStyle = '#f6f4ec'; ctx.fillRect(0, 0, W, H);
+    roundRect(ctx, 20, 20, W - 40, H - 40, 28); ctx.fillStyle = '#ffffff'; ctx.fill();
+
+    ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+    ctx.fillStyle = '#6b7a70'; ctx.font = '600 14px ' + sans;
+    ctx.fillText('MĖNESIO SĄSKAITOS', padX, 68);
+    ctx.fillStyle = '#1c2620'; ctx.font = '600 30px ' + serif;
+    ctx.fillText(monthText(getMonth()), padX, 106);
+
+    ctx.textBaseline = 'middle';
+    let y = headerH;
+    items.forEach(it => {
+      const cy = y + rowH / 2;
+      ctx.strokeStyle = '#eceee9'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(padX, y); ctx.lineTo(W - padX, y); ctx.stroke();
+      ctx.fillStyle = it.paid ? '#2e9e6b' : '#1c2620';
+      ctx.textAlign = 'left'; ctx.font = '500 19px ' + sans;
+      ctx.fillText(it.name + (it.paid ? '  ✓' : ''), padX, cy);
+      ctx.textAlign = 'right'; ctx.font = '600 20px ' + serif;
+      ctx.fillText(fmt(it.amount), W - padX, cy);
+      y += rowH;
+    });
+
+    const by = y + 20, bh = totalH - 18;
+    roundRect(ctx, padX, by, W - padX * 2, bh, 16); ctx.fillStyle = '#1c2620'; ctx.fill();
+    ctx.textAlign = 'left'; ctx.fillStyle = '#b9c7bd'; ctx.font = '600 14px ' + sans;
+    ctx.fillText('IŠ VISO', padX + 26, by + (showRemaining ? 36 : bh / 2));
+    ctx.textAlign = 'right'; ctx.fillStyle = '#ffffff'; ctx.font = '600 32px ' + serif;
+    ctx.fillText(fmt(total), W - padX - 26, by + (showRemaining ? 40 : bh / 2));
+    if (showRemaining) {
+      ctx.textAlign = 'left'; ctx.fillStyle = '#9fb3a6'; ctx.font = '500 14px ' + sans;
+      ctx.fillText('Liko sumokėti', padX + 26, by + 92);
+      ctx.textAlign = 'right'; ctx.fillStyle = '#7fd6aa'; ctx.font = '600 20px ' + serif;
+      ctx.fillText(fmt(remaining), W - padX - 26, by + 92);
+    }
+    return c;
+  }
+  function canvasToBlob(c) { return new Promise(res => c.toBlob(res, 'image/png')); }
+
+  const shareOverlay = document.getElementById('shareOverlay');
+  const shareTextEl = document.getElementById('shareText');
+  const sharePreview = document.getElementById('sharePreview');
+  let shareBlob = null;
+
+  async function openShare() {
+    shareTextEl.value = buildSummary();
+    shareBlob = null;
+    sharePreview.style.display = 'block';
+    shareOverlay.classList.add('show');
+    try {
+      const c = await renderCard();
+      sharePreview.src = c.toDataURL('image/png');
+      shareBlob = await canvasToBlob(c);
+    } catch(e) { sharePreview.style.display = 'none'; }
+  }
+  document.getElementById('share').addEventListener('click', openShare);
+
+  document.getElementById('shareImage').addEventListener('click', async () => {
+    try {
+      if (!shareBlob) { const c = await renderCard(); shareBlob = await canvasToBlob(c); }
+      const file = new File([shareBlob], 'saskaitos.png', { type: 'image/png' });
+      // 1) telefono dalijimosi langas (tiesiai į Messenger)
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file] }); return; }
+        catch(e) { if (e && e.name === 'AbortError') return; }
+      }
+      // 2) Claude išsaugojimas į telefoną
+      if (window.claude && window.claude.use) {
+        try {
+          const dl = await window.claude.use('downloads');
+          if (dl) { await dl.save({ filename: 'saskaitos.png', data: shareBlob }); toast('Paveikslėlis išsaugotas — nusiųsk jį Messenger'); return; }
+        } catch(e) { if (e && e.code === 'declined') return; }
+      }
+      // 3) paskutinė išeitis
+      const url = URL.createObjectURL(shareBlob);
+      const a = document.createElement('a'); a.href = url; a.download = 'saskaitos.png';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      toast('Paveikslėlis paruoštas');
+    } catch(e) { toast('Nepavyko. Pabandyk „Kopijuoti tekstą".'); }
+  });
+
+  document.getElementById('shareClose').addEventListener('click', () => shareOverlay.classList.remove('show'));
+  shareOverlay.addEventListener('click', e => { if (e.target === shareOverlay) shareOverlay.classList.remove('show'); });
+  document.getElementById('shareCopy').addEventListener('click', async () => {
+    const text = shareTextEl.value;
+    try { await navigator.clipboard.writeText(text); toast('Nukopijuota — atidaryk Messenger ir įklijuok'); }
+    catch(e) { shareTextEl.focus(); shareTextEl.select(); toast('Palaikyk tekstą ir paspausk „Kopijuoti"'); }
+  });
+
+  function normalizeUrl(u) { u = (u||'').trim(); if (!u) return ''; if (!/^https?:\/\//i.test(u)) u = 'https://' + u; return u; }
+  function refreshDateChip(row) {
+    const chip = row.querySelector('.chip.date'); const label = chip.querySelector('.lbl');
+    if (row.dataset.due) { chip.classList.add('has'); label.textContent = 'iki ' + fmtDue(row.dataset.due); }
+    else { chip.classList.remove('has'); label.textContent = 'terminas'; }
+  }
+  function refreshMeter(row) {
+    const chip = row.querySelector('.chip.meter');
+    const from = row.querySelector('.m-from').value.trim();
+    const to = row.querySelector('.m-to').value.trim();
+    const sumEl = row.querySelector('.meter-sum');
+    chip.classList.toggle('has', !!(from || to));
+    const f = num(from), t = num(to);
+    if (f !== null && t !== null) { sumEl.textContent = `sunaudota: ${(t - f)}`; sumEl.style.display = ''; }
+    else { sumEl.textContent = ''; sumEl.style.display = 'none'; }
+  }
+  function refreshLink(row) {
+    const chip = row.querySelector('.chip.link');
+    const edit = row.querySelector('.chip.linkedit');
+    const val = row.querySelector('.link-in').value.trim();
+    const open = row.querySelector('.link-open');
+    chip.classList.toggle('has', !!val);
+    edit.style.display = val ? '' : 'none';
+    if (val) { open.href = normalizeUrl(val); open.classList.remove('disabled'); }
+    else { open.removeAttribute('href'); open.classList.add('disabled'); }
+  }
+
+  function makeRow(item = { name:'', amount:'', paid:false, url:'', due:'', mFrom:'', mTo:'' }, beforeNode = null) {
+    const row = document.createElement('div');
+    row.className = 'row' + (item.paid ? ' is-paid' : '');
+    row.dataset.due = item.due || '';
+    row.innerHTML = `
+      <button class="check" title="Pažymėti apmokėta">✓</button>
+      <div class="mid">
+        <input class="name" type="text" placeholder="Pavadinimas">
+        <div class="meta-line">
+          <button class="chip date" type="button"><span>📅</span><span class="lbl">terminas</span></button>
+          <input class="date-input" type="date">
+          <button class="chip meter" type="button"><span>🔢</span><span>rodmenys</span></button>
+          <button class="chip link" type="button"><span>🌐</span><span>nuoroda</span></button>
+          <button class="chip linkedit" type="button" style="display:none">✏️</button>
+        </div>
+        <div class="rowdiff" style="display:none"></div>
+        <div class="panel meter-panel">
+          <label>nuo <input class="m-from" type="text" inputmode="decimal" placeholder="—"></label>
+          <label>iki <input class="m-to" type="text" inputmode="decimal" placeholder="—"></label>
+          <span class="meter-sum"></span>
+        </div>
+        <div class="panel link-panel">
+          <input class="link-in" type="url" inputmode="url" placeholder="pvz. ignitis.lt">
+          <a class="link-open disabled" target="_blank" rel="noopener noreferrer">Atidaryti</a>
+          <button class="link-remove" type="button">Pašalinti</button>
+        </div>
+      </div>
+      <div class="field">
+        <input class="amount-in" type="text" inputmode="decimal" placeholder="0,00">
+        <span class="eur">€</span>
+      </div>
+      <div class="rowctl">
+        <button class="del" title="Pašalinti">×</button>
+        <button class="ins" title="Pridėti eilutę žemiau">＋</button>
+      </div>`;
+
+    row.querySelector('.name').value = item.name || '';
+    row.querySelector('.amount-in').value = item.amount || '';
+    row.querySelector('.date-input').value = item.due || '';
+    row.querySelector('.m-from').value = item.mFrom || '';
+    row.querySelector('.m-to').value = item.mTo || '';
+    row.querySelector('.link-in').value = item.url || '';
+
+    row.querySelector('.amount-in').addEventListener('input', update);
+    row.querySelector('.name').addEventListener('input', update);
+    row.querySelector('.check').addEventListener('click', () => { row.classList.toggle('is-paid'); update(); });
+    row.querySelector('.del').addEventListener('click', () => { row.remove(); update(); });
+    row.querySelector('.ins').addEventListener('click', () => {
+      const newRow = makeRow(undefined, row.nextSibling);
+      newRow.querySelector('.name').focus();
+      save();
+    });
+
+    const dateInput = row.querySelector('.date-input');
+    row.querySelector('.chip.date').addEventListener('click', () => { if (dateInput.showPicker) { try { dateInput.showPicker(); return; } catch(e){} } dateInput.focus(); dateInput.click(); });
+    dateInput.addEventListener('change', () => { row.dataset.due = dateInput.value; refreshDateChip(row); update(); });
+
+    const meterPanel = row.querySelector('.meter-panel');
+    row.querySelector('.chip.meter').addEventListener('click', () => meterPanel.classList.toggle('show'));
+    row.querySelector('.m-from').addEventListener('input', () => { refreshMeter(row); save(); });
+    row.querySelector('.m-to').addEventListener('input', () => { refreshMeter(row); save(); });
+    if (item.mFrom || item.mTo) meterPanel.classList.add('show');
+
+    const linkPanel = row.querySelector('.link-panel');
+    row.querySelector('.chip.link').addEventListener('click', () => {
+      const val = row.querySelector('.link-in').value.trim();
+      if (val) { row.querySelector('.link-open').click(); }
+      else { linkPanel.classList.toggle('show'); }
+    });
+    row.querySelector('.chip.linkedit').addEventListener('click', () => linkPanel.classList.toggle('show'));
+    row.querySelector('.link-in').addEventListener('input', () => { refreshLink(row); save(); });
+    row.querySelector('.link-remove').addEventListener('click', () => {
+      row.querySelector('.link-in').value = '';
+      refreshLink(row); save(); linkPanel.classList.remove('show');
+    });
+
+    refreshDateChip(row); refreshMeter(row); refreshLink(row);
+    if (beforeNode) rowsEl.insertBefore(row, beforeNode); else rowsEl.appendChild(row);
+    return row;
+  }
+
+  function renderRows(rows) {
+    rowsEl.innerHTML = '';
+    (rows && rows.length ? rows : defaults).forEach(it => makeRow(it));
+    recalc();
+  }
+
+  // ---- pirminis piešimas iš vietinės atminties (greitai) ----
+  setMonthSilently(getMonth());
+  renderRows(loadRows());
+
+  document.getElementById('add').addEventListener('click', () => { makeRow(); rowsEl.lastElementChild.querySelector('.name').focus(); save(); });
+
+  document.getElementById('clear').addEventListener('click', async () => {
+    const ok = await showConfirm('Pradėti naują mėnesį?',
+      '• Mėnuo pasikeis į kitą\n• Sumos ir varnelės išsivalys\n• Terminai pasislinks mėnesiu į priekį\n• Rodmenų „iki" persikels į „nuo"\n• Nuorodos liks',
+      'Pradėti');
+    if (!ok) return;
+    snapshotCurrentMonth();
+    rowsEl.querySelectorAll('.row').forEach(row => {
+      row.querySelector('.amount-in').value = '';
+      row.classList.remove('is-paid');
+      const from = row.querySelector('.m-from'); const to = row.querySelector('.m-to');
+      if (to.value.trim()) { from.value = to.value.trim(); to.value = ''; }
+      refreshMeter(row);
+      if (row.dataset.due) { row.dataset.due = advanceDueByMonth(row.dataset.due); row.querySelector('.date-input').value = row.dataset.due; refreshDateChip(row); }
+    });
+    setMonth(nextMonthValue(getMonth()));
+    update();
+    toast('Naujas mėnuo pradėtas');
+  });
+
+  // setMonth be debesų įrašo (naudojamas pirminiam piešimui)
+  function setMonthSilently(v) { try { localStorage.setItem(MONTH_KEY, v); } catch(e){} monthInput.value = v; monthLabel.textContent = monthText(v); updateDueUI(); }
+
+  // ================= DEBESŲ SAUGOJIMAS (patikimas) =================
+  let dbDoc = null, applying = false, cloudTimer = null, cloudReady = false;
+
+  function scheduleCloud() {
+    if (!dbDoc || applying) return;
+    if (cloudTimer) clearTimeout(cloudTimer);
+    cloudTimer = setTimeout(writeCloud, 700);
+  }
+  async function writeCloud() {
+    cloudTimer = null;
+    if (!dbDoc) return;
+    try {
+      await dbDoc.set({ rows: collectRows(), month: getMonth(), history: history, updatedAt: Date.now() });
+      savedNote.textContent = 'Įrašyta ✓';
+      setTimeout(() => { savedNote.textContent = 'Įrašyta automatiškai'; }, 1500);
+    } catch(e) {}
+  }
+  function applyState(d) {
+    applying = true;
+    if (Array.isArray(d.history)) { history = d.history; saveHistoryLocal(); }
+    renderRows(d.rows);
+    if (d.month) setMonthSilently(d.month);
+    applying = false;
+  }
+  async function initCloud() {
+    if (!(window.claude && window.claude.use)) return;
+    let dbNs, userNs;
+    try { dbNs = await window.claude.use('db'); userNs = await window.claude.use('user'); } catch(e) { return; }
+    if (!dbNs || !userNs) return;
+    let uid = null;
+    try { uid = await userNs.id(); } catch(e) {}
+    if (!uid) return;
+    try { dbDoc = dbNs.doc('data/users/' + uid + '/bills'); } catch(e) { return; }
+    try {
+      const snap = await dbDoc.get();
+      if (snap.exists && snap.data() && Array.isArray(snap.data().rows)) {
+        applyState(snap.data());
+      } else {
+        writeCloud(); // perkelti dabartinius duomenis į debesį
+      }
+      cloudReady = true;
+    } catch(e) {}
+  }
+  // ================= ISTORIJA, GRAFIKAI, TERMINAS =================
+  function loadHistoryLocal() { try { const r = localStorage.getItem(HIST_KEY); if (r) { const d = JSON.parse(r); if (Array.isArray(d)) return d; } } catch(e){} return []; }
+  function saveHistoryLocal() { try { localStorage.setItem(HIST_KEY, JSON.stringify(history)); } catch(e){} }
+
+  function currentMonthSnapshot() {
+    const { items, total } = collectSummaryData();
+    const meters = [];
+    rowsEl.querySelectorAll('.row').forEach(row => {
+      const name = row.querySelector('.name').value.trim() || 'Be pavadinimo';
+      const f = num(row.querySelector('.m-from').value), t = num(row.querySelector('.m-to').value);
+      if (f !== null && t !== null) meters.push({ name, used: +(t - f).toFixed(2) });
+    });
+    return { month: getMonth(), label: monthText(getMonth()), total, items, meters };
+  }
+  function snapshotCurrentMonth() {
+    const snap = currentMonthSnapshot();
+    if (!snap.items.length && !snap.meters.length) return;
+    history = history.filter(h => h.month !== snap.month);
+    history.unshift(snap);
+    if (history.length > 60) history = history.slice(0, 60);
+    saveHistoryLocal();
+    scheduleCloud();
+  }
+
+  // ---- terminas = paskutinė mėnesio diena + priminimas kalendoriuje ----
+  function lastDayOfMonthDate(mv) { const [y,m] = mv.split('-').map(Number); return new Date(y, m, 0); }
+  function ymdCompact(d) { return '' + d.getFullYear() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0'); }
+  function updateDueUI() {
+    const dueText = document.getElementById('dueText');
+    const calBtn = document.getElementById('calBtn');
+    if (!dueText || !calBtn) return;
+    const mv = getMonth();
+    const d = lastDayOfMonthDate(mv);
+    dueText.textContent = 'Terminas: iki ' + d.toLocaleDateString('lt-LT', { day: 'numeric', month: 'long' });
+    const end = new Date(d); end.setDate(end.getDate() + 1);
+    const title = encodeURIComponent('Apmokėti sąskaitas (' + monthText(mv) + ')');
+    const details = encodeURIComponent('Komunalinės sąskaitos. Terminas – paskutinė mėnesio diena.');
+    calBtn.href = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + title + '&dates=' + ymdCompact(d) + '/' + ymdCompact(end) + '&details=' + details;
+  }
+
+  // ---- istorijos langas ----
+  const histOverlay = document.getElementById('histOverlay');
+  function shortMonth(mv) { const [y,m] = mv.split('-').map(Number); return new Date(y, m-1, 1).toLocaleDateString('lt-LT', { month: 'short' }); }
+
+  function drawChart(data) {
+    const canvas = document.getElementById('histChart');
+    const cssW = canvas.clientWidth || 320, cssH = 150;
+    const dpr = window.devicePixelRatio || 2;
+    canvas.width = cssW * dpr; canvas.height = cssH * dpr;
+    const ctx = canvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+    if (!data.length) return;
+    const max = Math.max.apply(null, data.map(d => d.total));
+    const padB = 28, padT = 20, padX = 6;
+    const slot = (cssW - padX * 2) / data.length;
+    const barW = Math.min(slot * 0.6, 36);
+    data.forEach((d, i) => {
+      const x = padX + i * slot + (slot - barW) / 2;
+      const h = max > 0 ? (cssH - padB - padT) * (d.total / max) : 0;
+      const y = cssH - padB - h;
+      ctx.fillStyle = '#2f7d8c';
+      roundRect(ctx, x, y, barW, Math.max(h, 2), 5); ctx.fill();
+      ctx.fillStyle = '#1c2620'; ctx.font = '600 10px Inter, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(Math.round(d.total), x + barW / 2, y - 5);
+      ctx.fillStyle = '#6b7a70'; ctx.font = '500 10px Inter, sans-serif';
+      ctx.fillText(shortMonth(d.month), x + barW / 2, cssH - 10);
+    });
+  }
+
+  function renderHistory() {
+    const histEmpty = document.getElementById('histEmpty');
+    const histBody = document.getElementById('histBody');
+    const live = currentMonthSnapshot();
+    let all = history.filter(h => h.month !== live.month).concat([live]);
+    all.sort((a, b) => a.month < b.month ? -1 : 1);
+    const hasData = all.some(e => e.total > 0 || (e.meters && e.meters.length));
+    if (!hasData) { histEmpty.style.display = 'block'; histBody.style.display = 'none'; return; }
+    histEmpty.style.display = 'none'; histBody.style.display = 'block';
+
+    // metų suvestinė
+    const yearStr = String(new Date().getFullYear());
+    const yearEntries = all.filter(e => e.month.indexOf(yearStr) === 0 && e.total > 0);
+    const yearTotal = yearEntries.reduce((s, e) => s + e.total, 0);
+    const yearAvg = yearEntries.length ? yearTotal / yearEntries.length : 0;
+    document.getElementById('histYear').innerHTML =
+      '<div class="hist-h">Šiais metais (' + yearStr + ')</div>' +
+      '<div class="year-card"><div><div class="yc-main">' + fmt(yearTotal) + '</div>' +
+      '<div class="yc-sub">' + yearEntries.length + ' mėn. · vidutiniškai ' + fmt(yearAvg) + '/mėn.</div></div></div>';
+
+    // grafikas
+    drawChart(all.filter(e => e.total > 0).slice(-12));
+
+    // suvartojimas
+    const consEl = document.getElementById('histConsumption');
+    const meterNames = [];
+    all.forEach(e => (e.meters || []).forEach(m => { if (meterNames.indexOf(m.name) < 0) meterNames.push(m.name); }));
+    if (meterNames.length) {
+      const cols = all.filter(e => (e.meters || []).length).slice(-6);
+      let html = '<div class="hist-h">Suvartojimas</div><table class="ctable"><thead><tr><th></th>';
+      cols.forEach(c => html += '<th>' + shortMonth(c.month) + '</th>');
+      html += '</tr></thead><tbody>';
+      meterNames.forEach(nm => {
+        html += '<tr><td>' + nm + '</td>';
+        cols.forEach(c => { const m = (c.meters || []).find(x => x.name === nm); html += '<td>' + (m ? ('' + m.used).replace('.', ',') : '–') + '</td>'; });
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      consEl.innerHTML = html; consEl.style.display = '';
+    } else { consEl.style.display = 'none'; }
+
+    // praėję mėnesiai
+    const listEl = document.getElementById('histList');
+    if (history.length) {
+      let html = '<div class="hist-h">Praėję mėnesiai</div>';
+      history.forEach(e => {
+        html += '<details class="hist-month"><summary><span>' + e.label + '</span><span class="hm-total">' + fmt(e.total) + '</span></summary><ul>';
+        (e.items || []).forEach(it => html += '<li><span>' + it.name + (it.paid ? ' ✓' : '') + '</span><span>' + fmt(it.amount) + '</span></li>');
+        html += '</ul></details>';
+      });
+      listEl.innerHTML = html; listEl.style.display = '';
+    } else { listEl.style.display = 'none'; }
+  }
+
+  document.getElementById('historyBtn').addEventListener('click', () => { histOverlay.classList.add('show'); requestAnimationFrame(renderHistory); });
+  document.getElementById('histClose').addEventListener('click', () => histOverlay.classList.remove('show'));
+  histOverlay.addEventListener('click', e => { if (e.target === histOverlay) histOverlay.classList.remove('show'); });
+
+  updateDueUI();
+  initCloud();
+</script>
+</body>
+</html>
