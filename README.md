@@ -1,6 +1,8 @@
 # 🧾 Sąskaitų skaičiuoklė / Bills Calculator
 
 🇱🇹 Paprasta, nemokama mėnesio komunalinių sąskaitų skaičiuoklė telefonui ir kompiuteriui.
+
+
 🇬🇧 A simple, free monthly utility-bills calculator for your phone and computer.
 
 👉 **https://rimadebes.github.io/Saskaitu-skaiciuokle/**
