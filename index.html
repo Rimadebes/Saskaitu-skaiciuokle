@@ -388,6 +388,7 @@
   const savedNote = document.getElementById('savedNote');
 
   function fmt(n) { return n.toFixed(2).replace('.', ',') + ' €'; }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
   function num(s) { const v = parseFloat((s||'').replace(',', '.')); return isNaN(v) ? null : v; }
   function todayStart() { const d = new Date(); d.setHours(0,0,0,0); return d; }
   function parseDue(s) { if (!s) return null; const d = new Date(s + 'T00:00:00'); return isNaN(d) ? null : d; }
@@ -471,8 +472,8 @@
       const du = daysUntil(row.dataset.due);
       if (!paid && du !== null) {
         const nm = row.querySelector('.name').value.trim() || 'Sąskaita';
-        if (du < 0) { row.classList.add('is-over'); overdue.push(nm); }
-        else if (du <= 3) { row.classList.add('is-due'); soon.push(nm + (du===0 ? ` (${t('todayW')})` : ' (' + t('inDays').replace('{n}', du) + ')')); }
+        if (du < 0) { row.classList.add('is-over'); overdue.push(esc(nm)); }
+        else if (du <= 3) { row.classList.add('is-due'); soon.push(esc(nm) + (du===0 ? ` (${t('todayW')})` : ' (' + t('inDays').replace('{n}', du) + ')')); }
       }
       // palyginimas su praeitu mėnesiu (toje pačioje eilutėje)
       const diffEl = row.querySelector('.rowdiff');
@@ -961,7 +962,7 @@
       cols.forEach(c => html += '<th>' + shortMonth(c.month) + '</th>');
       html += '</tr></thead><tbody>';
       meterNames.forEach(nm => {
-        html += '<tr><td>' + nm + '</td>';
+        html += '<tr><td>' + esc(nm) + '</td>';
         cols.forEach(c => { const m = (c.meters || []).find(x => x.name === nm); html += '<td>' + (m ? ('' + m.used).replace('.', ',') : '–') + '</td>'; });
         html += '</tr>';
       });
@@ -974,8 +975,8 @@
     if (history.length) {
       let html = '<div class="hist-h">' + t('pastMonths') + '</div>';
       history.forEach(e => {
-        html += '<details class="hist-month"><summary><span>' + e.label + '</span><span class="hm-total">' + fmt(e.total) + '</span></summary><ul>';
-        (e.items || []).forEach(it => html += '<li><span>' + it.name + (it.paid ? ' ✓' : '') + '</span><span>' + fmt(it.amount) + '</span></li>');
+        html += '<details class="hist-month"><summary><span>' + esc(e.label) + '</span><span class="hm-total">' + fmt(e.total) + '</span></summary><ul>';
+        (e.items || []).forEach(it => html += '<li><span>' + esc(it.name) + (it.paid ? ' ✓' : '') + '</span><span>' + fmt(it.amount) + '</span></li>');
         html += '</ul></details>';
       });
       listEl.innerHTML = html; listEl.style.display = '';
