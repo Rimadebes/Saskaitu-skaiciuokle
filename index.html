@@ -96,6 +96,9 @@
   .share:active { background: #276875; }
   .history-btn { width: 100%; margin-top: 10px; border: 1.5px solid var(--line); background: var(--card); color: var(--ink); font-family: inherit; font-size: 14px; font-weight: 600; padding: 12px; border-radius: 12px; cursor: pointer; }
   .history-btn:hover { border-color: var(--water); color: var(--water); }
+  .io-row { display: flex; gap: 10px; margin-top: 10px; }
+  .io-btn { flex: 1; border: 1.5px solid var(--line); background: var(--card); color: var(--muted); font-family: inherit; font-size: 13px; font-weight: 600; padding: 11px; border-radius: 12px; cursor: pointer; }
+  .io-btn:hover { border-color: var(--water); color: var(--water); }
 
   .duebar { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; }
   #dueText { font-size: 13.5px; font-weight: 600; color: var(--ink); }
@@ -201,6 +204,11 @@
     <button class="share" id="share">Dalintis suma</button>
     <button class="history-btn" id="historyBtn">📊 Istorija ir grafikai</button>
     <button class="history-btn" id="iconBtn">🎨 Ikona</button>
+    <div class="io-row">
+      <button class="io-btn" id="exportBtn">⬇️ Eksportuoti</button>
+      <button class="io-btn" id="importBtn">⬆️ Importuoti</button>
+      <input id="importFile" type="file" accept="application/json,.json" style="display:none">
+    </div>
 
     <footer>
       <button class="clear" id="clear">Naujas mėnuo (išvalyti)</button>
@@ -293,7 +301,7 @@
       consumption:'Suvartojimas', pastMonths:'Praėję mėnesiai', chipDate:'terminas', chipDateTo:'iki', chipMeter:'rodmenys', chipLink:'nuoroda',
       open:'Atidaryti', remove:'Pašalinti', from:'nuo', to:'iki', namePh:'Pavadinimas', urlPh:'pvz. ignitis.lt',
       used:'sunaudota', pricier:'brangiau', cheaper:'pigiau', overdueW:'Pradelsta', soonW:'Greitai mokėti', todayW:'šiandien', inDays:'po {n} d.',
-      selectRows:'Ką įtraukti', iconBtn:'Ikona', iconTitle:'Pasirink ikoną', iconPresets:'Paruoštos', iconCustom:'Sava ikona', iconColor:'Spalva', iconApply:'Taikyti', iconHint:'💡 Pirma išsirink ar susikurk ikoną, tada prisek programėlę prie pradžios ekrano — telefonas panaudos pasirinktą ikoną.', summaryTitle:'Sąskaitos', paidWord:'apmokėta', allPaidShort:'Viskas apmokėta', calTitle:'Apmokėti sąskaitas', calDetails:'Komunalinės sąskaitos. Terminas – paskutinė mėnesio diena.' },
+      selectRows:'Ką įtraukti', iconBtn:'Ikona', iconTitle:'Pasirink ikoną', iconPresets:'Paruoštos', iconCustom:'Sava ikona', iconColor:'Spalva', iconApply:'Taikyti', exportBtn:'Eksportuoti', importBtn:'Importuoti', impTitle:'Importuoti duomenis?', impBody:'Dabartiniai duomenys bus pakeisti įkeltais.', impDone:'Duomenys importuoti', impBad:'Netinkamas failas', expDone:'Atsarginė kopija paruošta', iconHint:'💡 Pirma išsirink ar susikurk ikoną, tada prisek programėlę prie pradžios ekrano — telefonas panaudos pasirinktą ikoną.', summaryTitle:'Sąskaitos', paidWord:'apmokėta', allPaidShort:'Viskas apmokėta', calTitle:'Apmokėti sąskaitas', calDetails:'Komunalinės sąskaitos. Terminas – paskutinė mėnesio diena.' },
     en: { defNames:['Cold water','Hot water','Electricity','Gas','Waste','Building upkeep'],
       eyebrow:'Monthly bills', title:'Bills calculator', remind:'Remind', dueLabel:'Due by',
       addRow:'Add row', totalLabel:'Total', remainLabel:'Left to pay', allPaid:'All paid ✓',
@@ -310,7 +318,7 @@
       consumption:'Consumption', pastMonths:'Past months', chipDate:'due', chipDateTo:'by', chipMeter:'readings', chipLink:'link',
       open:'Open', remove:'Remove', from:'from', to:'to', namePh:'Name', urlPh:'e.g. ignitis.lt',
       used:'used', pricier:'more', cheaper:'less', overdueW:'Overdue', soonW:'Due soon', todayW:'today', inDays:'in {n} d.',
-      selectRows:'What to include', iconBtn:'Icon', iconTitle:'Choose an icon', iconPresets:'Presets', iconCustom:'Your own', iconColor:'Color', iconApply:'Apply', iconHint:'💡 Choose or create your icon first, then add the app to your home screen — the phone will use the chosen icon.', summaryTitle:'Bills', paidWord:'paid', allPaidShort:'All paid', calTitle:'Pay the bills', calDetails:'Utility bills. Due on the last day of the month.' },
+      selectRows:'What to include', iconBtn:'Icon', iconTitle:'Choose an icon', iconPresets:'Presets', iconCustom:'Your own', iconColor:'Color', iconApply:'Apply', exportBtn:'Export', importBtn:'Import', impTitle:'Import data?', impBody:'Current data will be replaced with the imported data.', impDone:'Data imported', impBad:'Invalid file', expDone:'Backup ready', iconHint:'💡 Choose or create your icon first, then add the app to your home screen — the phone will use the chosen icon.', summaryTitle:'Bills', paidWord:'paid', allPaidShort:'All paid', calTitle:'Pay the bills', calDetails:'Utility bills. Due on the last day of the month.' },
     ru: { defNames:['Холодная вода','Горячая вода','Электричество','Газ','Мусор','Содержание дома'],
       eyebrow:'Ежемесячные счета', title:'Калькулятор счетов', remind:'Напомнить', dueLabel:'Срок: до',
       addRow:'Добавить строку', totalLabel:'Итого', remainLabel:'Осталось оплатить', allPaid:'Всё оплачено ✓',
@@ -327,7 +335,7 @@
       consumption:'Потребление', pastMonths:'Прошлые месяцы', chipDate:'срок', chipDateTo:'до', chipMeter:'показания', chipLink:'ссылка',
       open:'Открыть', remove:'Удалить', from:'от', to:'до', namePh:'Название', urlPh:'напр. ignitis.lt',
       used:'израсходовано', pricier:'дороже', cheaper:'дешевле', overdueW:'Просрочено', soonW:'Скоро оплата', todayW:'сегодня', inDays:'через {n} дн.',
-      selectRows:'Что включить', iconBtn:'Иконка', iconTitle:'Выбери иконку', iconPresets:'Готовые', iconCustom:'Своя', iconColor:'Цвет', iconApply:'Применить', iconHint:'💡 Сначала выбери или создай иконку, затем добавь приложение на главный экран — телефон использует выбранную иконку.', summaryTitle:'Счета', paidWord:'оплачено', allPaidShort:'Всё оплачено', calTitle:'Оплатить счета', calDetails:'Коммунальные счета. Срок — последний день месяца.' },
+      selectRows:'Что включить', iconBtn:'Иконка', iconTitle:'Выбери иконку', iconPresets:'Готовые', iconCustom:'Своя', iconColor:'Цвет', iconApply:'Применить', exportBtn:'Экспорт', importBtn:'Импорт', impTitle:'Импортировать данные?', impBody:'Текущие данные будут заменены импортированными.', impDone:'Данные импортированы', impBad:'Неверный файл', expDone:'Резервная копия готова', iconHint:'💡 Сначала выбери или создай иконку, затем добавь приложение на главный экран — телефон использует выбранную иконку.', summaryTitle:'Счета', paidWord:'оплачено', allPaidShort:'Всё оплачено', calTitle:'Оплатить счета', calDetails:'Коммунальные счета. Срок — последний день месяца.' },
     lv: { defNames:['Aukstais ūdens','Karstais ūdens','Elektrība','Gāze','Atkritumi','Nama apsaimniekošana'],
       eyebrow:'Mēneša rēķini', title:'Rēķinu kalkulators', remind:'Atgādināt', dueLabel:'Termiņš: līdz',
       addRow:'Pievienot rindu', totalLabel:'Kopā', remainLabel:'Atlicis samaksāt', allPaid:'Viss samaksāts ✓',
@@ -344,7 +352,7 @@
       consumption:'Patēriņš', pastMonths:'Iepriekšējie mēneši', chipDate:'termiņš', chipDateTo:'līdz', chipMeter:'rādījumi', chipLink:'saite',
       open:'Atvērt', remove:'Noņemt', from:'no', to:'līdz', namePh:'Nosaukums', urlPh:'piem. ignitis.lt',
       used:'patērēts', pricier:'dārgāk', cheaper:'lētāk', overdueW:'Nokavēts', soonW:'Drīz jāmaksā', todayW:'šodien', inDays:'pēc {n} d.',
-      selectRows:'Ko iekļaut', iconBtn:'Ikona', iconTitle:'Izvēlies ikonu', iconPresets:'Gatavās', iconCustom:'Sava', iconColor:'Krāsa', iconApply:'Lietot', iconHint:'💡 Vispirms izvēlies vai izveido ikonu, tad pievieno lietotni sākuma ekrānam — tālrunis izmantos izvēlēto ikonu.', summaryTitle:'Rēķini', paidWord:'samaksāts', allPaidShort:'Viss samaksāts', calTitle:'Samaksāt rēķinus', calDetails:'Komunālie rēķini. Termiņš — mēneša pēdējā diena.' },
+      selectRows:'Ko iekļaut', iconBtn:'Ikona', iconTitle:'Izvēlies ikonu', iconPresets:'Gatavās', iconCustom:'Sava', iconColor:'Krāsa', iconApply:'Lietot', exportBtn:'Eksportēt', importBtn:'Importēt', impTitle:'Importēt datus?', impBody:'Pašreizējie dati tiks aizstāti ar importētajiem.', impDone:'Dati importēti', impBad:'Nederīgs fails', expDone:'Rezerves kopija gatava', iconHint:'💡 Vispirms izvēlies vai izveido ikonu, tad pievieno lietotni sākuma ekrānam — tālrunis izmantos izvēlēto ikonu.', summaryTitle:'Rēķini', paidWord:'samaksāts', allPaidShort:'Viss samaksāts', calTitle:'Samaksāt rēķinus', calDetails:'Komunālie rēķini. Termiņš — mēneša pēdējā diena.' },
     et: { defNames:['Külm vesi','Kuum vesi','Elekter','Gaas','Prügi','Majahaldus'],
       eyebrow:'Kuu arved', title:'Arvete kalkulaator', remind:'Tuleta meelde', dueLabel:'Tähtaeg: kuni',
       addRow:'Lisa rida', totalLabel:'Kokku', remainLabel:'Maksta jäänud', allPaid:'Kõik makstud ✓',
@@ -361,7 +369,7 @@
       consumption:'Tarbimine', pastMonths:'Möödunud kuud', chipDate:'tähtaeg', chipDateTo:'kuni', chipMeter:'näidud', chipLink:'link',
       open:'Ava', remove:'Eemalda', from:'alates', to:'kuni', namePh:'Nimi', urlPh:'nt ignitis.lt',
       used:'tarbitud', pricier:'kallim', cheaper:'odavam', overdueW:'Hilinenud', soonW:'Varsti maksta', todayW:'täna', inDays:'{n} p pärast',
-      selectRows:'Mida kaasata', iconBtn:'Ikoon', iconTitle:'Vali ikoon', iconPresets:'Valmis', iconCustom:'Oma', iconColor:'Värv', iconApply:'Rakenda', iconHint:'💡 Vali või loo esmalt ikoon, seejärel lisa rakendus avakuvale — telefon kasutab valitud ikooni.', summaryTitle:'Arved', paidWord:'makstud', allPaidShort:'Kõik makstud', calTitle:'Maksa arved', calDetails:'Kommunaalarved. Tähtaeg — kuu viimane päev.' }
+      selectRows:'Mida kaasata', iconBtn:'Ikoon', iconTitle:'Vali ikoon', iconPresets:'Valmis', iconCustom:'Oma', iconColor:'Värv', iconApply:'Rakenda', exportBtn:'Ekspordi', importBtn:'Impordi', impTitle:'Impordi andmed?', impBody:'Praegused andmed asendatakse imporditutega.', impDone:'Andmed imporditud', impBad:'Vigane fail', expDone:'Varukoopia valmis', iconHint:'💡 Vali või loo esmalt ikoon, seejärel lisa rakendus avakuvale — telefon kasutab valitud ikooni.', summaryTitle:'Arved', paidWord:'makstud', allPaidShort:'Kõik makstud', calTitle:'Maksa arved', calDetails:'Kommunaalarved. Tähtaeg — kuu viimane päev.' }
   };
   function loadLang() { let v=''; try { v = localStorage.getItem(LANG_KEY) || ''; } catch(e){} return I18N[v] ? v : 'lt'; }
   let lang = loadLang();
@@ -1007,6 +1015,8 @@
     setTxt('histChartH', t('expenses'));
     setTxt('histClose', t('close'));
     setTxt('iconBtn', '🎨 ' + t('iconBtn'));
+    setTxt('exportBtn', '⬇️ ' + t('exportBtn'));
+    setTxt('importBtn', '⬆️ ' + t('importBtn'));
     setTxt('iconTitle', t('iconTitle'));
     setTxt('iconPresetsLabel', t('iconPresets'));
     setTxt('iconCustomLabel', t('iconCustom'));
@@ -1084,6 +1094,58 @@
   document.getElementById('iconClose').addEventListener('click', () => iconOverlay.classList.remove('show'));
   document.getElementById('iconApply').addEventListener('click', () => { iconOverlay.classList.remove('show'); toast(t('savedTick')); });
   iconOverlay.addEventListener('click', e => { if (e.target === iconOverlay) iconOverlay.classList.remove('show'); });
+
+  // ---- eksportas / importas (duomenų perkėlimas) ----
+  function buildExport() {
+    return { app: 'saskaitu-skaiciuokle', version: 1, exportedAt: new Date().toISOString(),
+      rows: collectRows(), month: getMonth(), history: history, lang: lang, icon: iconCfg };
+  }
+  document.getElementById('exportBtn').addEventListener('click', async () => {
+    const json = JSON.stringify(buildExport(), null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const fname = 'saskaitos-atsarga.json';
+    if (window.claude && window.claude.use) {
+      try { const dl = await window.claude.use('downloads'); if (dl) { await dl.save({ filename: fname, data: blob }); toast(t('expDone')); return; } }
+      catch(e) { if (e && e.code === 'declined') return; }
+    }
+    try {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = fname;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      toast(t('expDone'));
+    } catch(e) { toast(t('tFail')); }
+  });
+
+  const importFile = document.getElementById('importFile');
+  document.getElementById('importBtn').addEventListener('click', () => importFile.click());
+  importFile.addEventListener('change', () => {
+    const file = importFile.files && importFile.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      let data = null;
+      try { data = JSON.parse(reader.result); } catch(e) {}
+      if (!data || data.app !== 'saskaitu-skaiciuokle' || !Array.isArray(data.rows)) { toast(t('impBad')); importFile.value = ''; return; }
+      const ok = await showConfirm(t('impTitle'), t('impBody'), t('ok'));
+      if (!ok) { importFile.value = ''; return; }
+      if (data.lang && I18N[data.lang]) { lang = data.lang; try { localStorage.setItem(LANG_KEY, lang); } catch(e){} }
+      if (data.icon && data.icon.emoji && data.icon.bg) { iconCfg = { emoji: data.icon.emoji, bg: data.icon.bg }; saveIcon(); }
+      history = Array.isArray(data.history) ? data.history : [];
+      saveHistoryLocal();
+      applyI18n();
+      applyIcon();
+      renderRows(data.rows);
+      if (data.month) setMonthSilently(data.month);
+      updateDueUI();
+      recalc();
+      save();
+      scheduleCloud();
+      importFile.value = '';
+      toast(t('impDone'));
+    };
+    reader.readAsText(file);
+  });
 
   applyIcon();
   updateDueUI();
