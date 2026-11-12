@@ -633,10 +633,13 @@
     buildShareChecklist();
     await rebuildSharePreview();
   }
+  function gcEvent(name){ try { if (window.goatcounter && window.goatcounter.count) window.goatcounter.count({ path: name, title: name, event: true }); } catch(e){} }
   document.getElementById('share').addEventListener('click', openShare);
+  document.getElementById('share').addEventListener('click', () => gcEvent('dalintis-atverta'));
 
   document.getElementById('shareImage').addEventListener('click', async () => {
     try {
+      gcEvent('dalintis-nuotrauka');
       if (!shareBlob) { const c = await renderCard(); shareBlob = await canvasToBlob(c); }
       const file = new File([shareBlob], 'saskaitos.png', { type: 'image/png' });
       // 1) telefono dalijimosi langas (tiesiai į Messenger)
@@ -663,6 +666,7 @@
   document.getElementById('shareClose').addEventListener('click', () => shareOverlay.classList.remove('show'));
   shareOverlay.addEventListener('click', e => { if (e.target === shareOverlay) shareOverlay.classList.remove('show'); });
   document.getElementById('shareCopy').addEventListener('click', async () => {
+    gcEvent('dalintis-tekstas');
     const text = shareTextEl.value;
     try { await navigator.clipboard.writeText(text); toast(t('tCopied')); }
     catch(e) { shareTextEl.focus(); shareTextEl.select(); toast(t('tCopyHold')); }
@@ -1154,5 +1158,8 @@
   updateDueUI();
   initCloud();
 </script>
+<!-- Lankytoju skaitliukas (GoatCounter) - anoniminis, be slapuku -->
+<script data-goatcounter="https://rimadebes.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
