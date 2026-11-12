@@ -389,9 +389,27 @@
   const monthLabel = document.getElementById('monthLabel');
   const savedNote = document.getElementById('savedNote');
 
-  function fmt(n) { return n.toFixed(2).replace('.', ',') + ' €'; }
+  function fmt(n) { n = Number(n); if (!isFinite(n)) n = 0; return n.toFixed(2).replace('.', ',') + ' €'; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
   function num(s) { const v = parseFloat((s||'').replace(',', '.')); return isNaN(v) ? null : v; }
+  // Importo apsauga: suvedam viską į tikrus tipus, kad į HTML nepatektų svetimas kodas
+  function clampStr(s, max) { return String(s == null ? '' : s).slice(0, max); }
+  function toNum(n) { const v = (typeof n === 'number') ? n : parseFloat(String(n == null ? '' : n).replace(',', '.')); return isFinite(v) ? v : 0; }
+  function sanitizeImport(d) {
+    d = d || {};
+    const out = { app: 'saskaitu-skaiciuokle', version: 1 };
+    out.month = clampStr(d.month, 10);
+    out.lang = clampStr(d.lang, 5);
+    out.rows = (Array.isArray(d.rows) ? d.rows : []).slice(0, 100).map(r => { r = r || {}; return {
+      name: clampStr(r.name, 60), amount: clampStr(r.amount, 20), paid: !!r.paid,
+      url: clampStr(r.url, 300), due: clampStr(r.due, 20), mFrom: clampStr(r.mFrom, 20), mTo: clampStr(r.mTo, 20) }; });
+    out.history = (Array.isArray(d.history) ? d.history : []).slice(0, 120).map(e => { e = e || {}; return {
+      month: clampStr(e.month, 10), label: clampStr(e.label, 40), total: toNum(e.total),
+      items: (Array.isArray(e.items) ? e.items : []).slice(0, 100).map(it => { it = it || {}; return { name: clampStr(it.name, 60), amount: toNum(it.amount), paid: !!it.paid }; }),
+      meters: (Array.isArray(e.meters) ? e.meters : []).slice(0, 100).map(m => { m = m || {}; return { name: clampStr(m.name, 60), used: toNum(m.used) }; }) }; });
+    if (d.icon && typeof d.icon === 'object') out.icon = { emoji: clampStr(d.icon.emoji, 8), bg: clampStr(d.icon.bg, 20) };
+    return out;
+  }
   function todayStart() { const d = new Date(); d.setHours(0,0,0,0); return d; }
   function parseDue(s) { if (!s) return null; const d = new Date(s + 'T00:00:00'); return isNaN(d) ? null : d; }
   function daysUntil(s) { const d = parseDue(s); if (!d) return null; return Math.round((d - todayStart()) / 86400000); }
@@ -917,7 +935,7 @@
       html += '</tr></thead><tbody>';
       meterNames.forEach(nm => {
         html += '<tr><td>' + esc(nm) + '</td>';
-        cols.forEach(c => { const m = (c.meters || []).find(x => x.name === nm); html += '<td>' + (m ? ('' + m.used).replace('.', ',') : '–') + '</td>'; });
+        cols.forEach(c => { const m = (c.meters || []).find(x => x.name === nm); html += '<td>' + (m ? esc(('' + m.used).replace('.', ',')) : '–') + '</td>'; });
         html += '</tr>';
       });
       html += '</tbody></table></div>';
@@ -1080,6 +1098,7 @@
       if (!data || data.app !== 'saskaitu-skaiciuokle' || !Array.isArray(data.rows)) { toast(t('impBad')); importFile.value = ''; return; }
       const ok = await showConfirm(t('impTitle'), t('impBody'), t('ok'));
       if (!ok) { importFile.value = ''; return; }
+      data = sanitizeImport(data);
       if (data.lang && I18N[data.lang]) { lang = data.lang; try { localStorage.setItem(LANG_KEY, lang); } catch(e){} }
       if (data.icon && data.icon.emoji && data.icon.bg) { iconCfg = { emoji: data.icon.emoji, bg: data.icon.bg }; saveIcon(); }
       history = Array.isArray(data.history) ? data.history : [];
