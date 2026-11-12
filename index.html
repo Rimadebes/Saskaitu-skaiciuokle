@@ -15,6 +15,7 @@
     --due: #c98a16; --due-bg: #fdf4e3; --over: #c0392b; --over-bg: #fbeceb;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { overflow-x: hidden; max-width: 100%; }
   body { font-family: 'Inter', system-ui, sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 26px 16px 70px; }
   .wrap { width: 100%; max-width: 440px; }
   header { margin-bottom: 16px; position: relative; }
@@ -112,6 +113,7 @@
   .year-card .yc-main { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 600; color: var(--ink); }
   .year-card .yc-sub { font-size: 12px; color: var(--muted); }
   #histChart { width: 100%; height: 150px; display: block; }
+  .ctable-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .ctable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   .ctable th, .ctable td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--line); }
   .ctable th:first-child, .ctable td:first-child { text-align: left; color: var(--muted); font-weight: 500; }
@@ -958,15 +960,15 @@
     all.forEach(e => (e.meters || []).forEach(m => { if (meterNames.indexOf(m.name) < 0) meterNames.push(m.name); }));
     if (meterNames.length) {
       const cols = all.filter(e => (e.meters || []).length).slice(-6);
-      let html = '<div class="hist-h">' + t('consumption') + '</div><table class="ctable"><thead><tr><th></th>';
-      cols.forEach(c => html += '<th>' + shortMonth(c.month) + '</th>');
+      let html = '<div class="hist-h">' + t('consumption') + '</div><div class="ctable-wrap"><table class="ctable"><thead><tr><th></th>';
+      cols.forEach(c => html += '<th>' + esc(shortMonth(c.month)) + '</th>');
       html += '</tr></thead><tbody>';
       meterNames.forEach(nm => {
         html += '<tr><td>' + esc(nm) + '</td>';
         cols.forEach(c => { const m = (c.meters || []).find(x => x.name === nm); html += '<td>' + (m ? ('' + m.used).replace('.', ',') : '–') + '</td>'; });
         html += '</tr>';
       });
-      html += '</tbody></table>';
+      html += '</tbody></table></div>';
       consEl.innerHTML = html; consEl.style.display = '';
     } else { consEl.style.display = 'none'; }
 
