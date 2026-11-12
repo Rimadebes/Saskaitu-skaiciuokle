@@ -419,7 +419,7 @@
   function monthText(val) { if (!val) return ''; const [y,m] = val.split('-').map(Number); const s = new Date(y, m-1, 1).toLocaleDateString(loc(), { year:'numeric', month:'long' }); return s.charAt(0).toUpperCase() + s.slice(1); }
   function nextMonthValue(val) { let [y,m] = val.split('-').map(Number); m += 1; if (m > 12) { m = 1; y += 1; } return y + '-' + String(m).padStart(2,'0'); }
   function getMonth() { let v=''; try { v = localStorage.getItem(MONTH_KEY) || ''; } catch(e){} return v || currentMonthValue(); }
-  function setMonth(v) { try { localStorage.setItem(MONTH_KEY, v); } catch(e){} monthInput.value = v; monthLabel.textContent = monthText(v); updateDueUI(); scheduleCloud(); }
+  function setMonth(v) { try { localStorage.setItem(MONTH_KEY, v); } catch(e){} monthInput.value = v; monthLabel.textContent = monthText(v); updateDueUI(); }
   monthBtn.addEventListener('click', () => { if (monthInput.showPicker) { try { monthInput.showPicker(); return; } catch(e){} } monthInput.focus(); monthInput.click(); });
   monthInput.addEventListener('change', () => { if (monthInput.value) setMonth(monthInput.value); });
 
@@ -460,7 +460,6 @@
   }
   function save() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(collectRows())); } catch(e){}
-    scheduleCloud();
   }
 
   function recalc() {
@@ -647,14 +646,7 @@
         try { await navigator.share({ files: [file] }); return; }
         catch(e) { if (e && e.name === 'AbortError') return; }
       }
-      // 2) Claude išsaugojimas į telefoną
-      if (window.claude && window.claude.use) {
-        try {
-          const dl = await window.claude.use('downloads');
-          if (dl) { await dl.save({ filename: 'saskaitos.png', data: shareBlob }); toast(t('tImgSaved')); return; }
-        } catch(e) { if (e && e.code === 'declined') return; }
-      }
-      // 3) paskutinė išeitis
+      // Jei dalijimosi langas negalimas — išsaugom paveikslėlį į įrenginį
       const url = URL.createObjectURL(shareBlob);
       const a = document.createElement('a'); a.href = url; a.download = 'saskaitos.png';
       document.body.appendChild(a); a.click(); a.remove();
@@ -822,50 +814,7 @@
   // setMonth be debesų įrašo (naudojamas pirminiam piešimui)
   function setMonthSilently(v) { try { localStorage.setItem(MONTH_KEY, v); } catch(e){} monthInput.value = v; monthLabel.textContent = monthText(v); updateDueUI(); }
 
-  // ================= DEBESŲ SAUGOJIMAS (patikimas) =================
-  let dbDoc = null, applying = false, cloudTimer = null, cloudReady = false;
-
-  function scheduleCloud() {
-    if (!dbDoc || applying) return;
-    if (cloudTimer) clearTimeout(cloudTimer);
-    cloudTimer = setTimeout(writeCloud, 700);
-  }
-  async function writeCloud() {
-    cloudTimer = null;
-    if (!dbDoc) return;
-    try {
-      await dbDoc.set({ rows: collectRows(), month: getMonth(), history: history, lang: lang, updatedAt: Date.now() });
-      savedNote.textContent = t('savedTick');
-      setTimeout(() => { savedNote.textContent = t('savedAuto'); }, 1500);
-    } catch(e) {}
-  }
-  function applyState(d) {
-    applying = true;
-    if (d.lang && I18N[d.lang] && d.lang !== lang) { lang = d.lang; try { localStorage.setItem(LANG_KEY, lang); } catch(e){} applyI18n(); }
-    if (Array.isArray(d.history)) { history = d.history; saveHistoryLocal(); }
-    renderRows(d.rows);
-    if (d.month) setMonthSilently(d.month);
-    applying = false;
-  }
-  async function initCloud() {
-    if (!(window.claude && window.claude.use)) return;
-    let dbNs, userNs;
-    try { dbNs = await window.claude.use('db'); userNs = await window.claude.use('user'); } catch(e) { return; }
-    if (!dbNs || !userNs) return;
-    let uid = null;
-    try { uid = await userNs.id(); } catch(e) {}
-    if (!uid) return;
-    try { dbDoc = dbNs.doc('data/users/' + uid + '/bills'); } catch(e) { return; }
-    try {
-      const snap = await dbDoc.get();
-      if (snap.exists && snap.data() && Array.isArray(snap.data().rows)) {
-        applyState(snap.data());
-      } else {
-        writeCloud(); // perkelti dabartinius duomenis į debesį
-      }
-      cloudReady = true;
-    } catch(e) {}
-  }
+  // Duomenys saugomi tik šio įrenginio naršyklėje (localStorage). Debesų sinchronizacijos nėra.
   // ================= ISTORIJA, GRAFIKAI, TERMINAS =================
   function loadHistoryLocal() { try { const r = localStorage.getItem(HIST_KEY); if (r) { const d = JSON.parse(r); if (Array.isArray(d)) return d; } } catch(e){} return []; }
   function saveHistoryLocal() { try { localStorage.setItem(HIST_KEY, JSON.stringify(history)); } catch(e){} }
@@ -887,7 +836,6 @@
     history.unshift(snap);
     if (history.length > 60) history = history.slice(0, 60);
     saveHistoryLocal();
-    scheduleCloud();
   }
 
   // ---- terminas = paskutinė mėnesio diena + priminimas kalendoriuje ----
@@ -1045,7 +993,7 @@
     applyI18n();
     renderRows(data);
     setMonthSilently(getMonth());
-    scheduleCloud();
+    save();
   });
 
   // ---- ikonos pasirinkimas ----
@@ -1111,10 +1059,6 @@
     const json = JSON.stringify(buildExport(), null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const fname = 'saskaitos-atsarga.json';
-    if (window.claude && window.claude.use) {
-      try { const dl = await window.claude.use('downloads'); if (dl) { await dl.save({ filename: fname, data: blob }); toast(t('expDone')); return; } }
-      catch(e) { if (e && e.code === 'declined') return; }
-    }
     try {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = fname;
@@ -1147,7 +1091,6 @@
       updateDueUI();
       recalc();
       save();
-      scheduleCloud();
       importFile.value = '';
       toast(t('impDone'));
     };
@@ -1156,7 +1099,6 @@
 
   applyIcon();
   updateDueUI();
-  initCloud();
 </script>
 <!-- Lankytoju skaitliukas (GoatCounter) - anoniminis, be slapuku -->
 <script data-goatcounter="https://rimadebes.goatcounter.com/count"
